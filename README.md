@@ -9,7 +9,7 @@ The main focus is to use state-of-the-art data structures to tackle this goal. F
 
 ### Binding with Python
 I tried to make porting this library to python as easy as possible in order to use it in a more flexible environment. The linkage to a C++ interface preserves the execution speed while offering a more easy to use interface to the user.
-Boost.Python
+Boost.Python or ctypes library from python standard library
 
 ## Usage
 A full documentation can be found under

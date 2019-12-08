@@ -29,11 +29,13 @@ namespace jmaerte {
 
             std::vector<int> f;
 
-            complex();
+            complex(std::string name);
 
         public:
 
             std::vector<double> laplacian_spectrum(int i);
+
+            std::vector<int> f_vector();
         };
 
         class s_tree : public complex {
@@ -42,35 +44,46 @@ namespace jmaerte {
             private:
 
                 template<typename InputIt>
-                bool _insert(InputIt it, InputIt end, bool inserted);
+                node * _insert(InputIt it, InputIt end, node *);
 
             public:
+                node * next;
+
                 std::unordered_map<int, node*> children;
 
                 template<typename InputIt>
-                bool insert(InputIt it, InputIt end);
+                node* insert(InputIt it, InputIt end);
             };
 
             static node* get_node() {
                 node* n = new node;
                 n->children = {};
+                n->next = nullptr;
                 return n;
             }
 
-            s_tree();
+            s_tree(std::string name);
 
             void _insert(std::vector<int>);
             void n_print(node *, std::string);
 
             node* head = get_node();
+
             stream<sparse<double>> laplacian(int i) override;
         public:
 
-            void s_insert(std::vector<int>, int sceleton = -2);
+            std::vector<std::map<int, node*> *> chains;
+
+            void s_insert(const std::vector<int> &, int sceleton = -1);
             void print();
 
-            static s_tree* from_file(std::string, int sceleton = -2, std::string sep = ",", std::string set_openers = "\\[{", std::string set_closers = "\\]}");
-            static s_tree* from_facets(std::vector<std::vector<int>>, int sceleton = -2);
+            static s_tree* from_file(
+                    const std::string &,
+                    int sceleton = -2,
+                    const std::string & sep = ",",
+                    const std::string & set_openers = "\\[{",
+                    const std::string & set_closers = "\\]}");
+            static s_tree* from_facets(std::vector<std::vector<int>>, std::string, int sceleton = -1);
         };
     }
 }

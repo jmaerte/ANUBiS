@@ -46,7 +46,7 @@ public:
     }
 
     int get(int i) {
-        return mask[i];
+        return masked[mask[i]];
     }
 
     iterator begin() {

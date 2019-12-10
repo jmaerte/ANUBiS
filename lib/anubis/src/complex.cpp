@@ -102,6 +102,7 @@ namespace jmaerte {
                 const std::string & set_openers,
                 const std::string & set_closers) {
 
+            std::cout << "Opening file..." << std::endl;
             std::ifstream file;
             file.open(path);
             std::string content;
@@ -111,6 +112,7 @@ namespace jmaerte {
                 std::cout << "[IO] Error: failed to open file!" << std::endl;
             }
             file.close();
+            std::cout << "Read file..." << std::endl;
             size_t pos = content.find(" ");
 
             while(pos != std::string::npos) {
@@ -134,28 +136,28 @@ namespace jmaerte {
                 }
             }
 
+            std::cout << "Found name: " << name << std::endl;
+
             content = content.substr(1, content.size() - 2);
 
             std::regex simplex("[" + set_openers + "](([\\[{][\\w" + sep + "]*[\\]}])|([\\w" + sep + "]*))*[" + set_closers + "]");
 
             std::smatch matcher;
             std::string::const_iterator search (content.cbegin());
-            std::vector<std::string> s_facets;
-            while (regex_search(search, content.cend(), matcher, simplex)) {
-                search = matcher.suffix().first;
-                std::string curr = matcher[0];
-                curr = curr.substr(1, curr.size() - 2);
-                s_facets.push_back(curr);
-            }
+
             std::map<std::string, int> labels;
             int i_labels = 0;
 
             auto * tree = new s_tree(name);
 
-//            thread_pool workers (3);
+            thread_pool workers (1);
 
-            for (auto const & s_facet : s_facets) {
-//                std::cout << s_facet << std::endl;
+            while (regex_search(search, content.cend(), matcher, simplex)) {
+                search = matcher.suffix().first;
+                std::string s_facet = matcher[0];
+                s_facet = s_facet.substr(1, s_facet.size() - 2);
+
+
                 std::regex element("[" + set_openers + "][\\w,]*[" + set_closers + "]|[\\w]+");
                 std::smatch element_matcher;
                 std::string::const_iterator element_search (s_facet.cbegin());
@@ -167,21 +169,14 @@ namespace jmaerte {
                     std::string curr = element_matcher[0];
                     if (labels.find(curr) == labels.end()) labels[curr] = i_labels++;
                     facet.push_back(labels[curr]);
-//                    std::cout << curr << " " << labels[curr] << std::endl;
                 }
 
-//                workers.add_work(
-//                    [tree](const std::vector<int>& f, int s) {
-//                        tree->s_insert(f, s);
-//                    }, facet, sceleton);
+                std::cout << "Pushing simplex " << s_facet << std::endl;
 
-                tree->s_insert(facet, sceleton);
-
-//                std::cout << s_facet << " ";
-//                for (auto el : facet) {
-//                    std::cout << el << " ";
-//                }
-//                std::cout << std::endl;
+                workers.add_work(
+                        [&tree](const std::vector<int> & f, int s) {
+                            tree->s_insert(f, s);
+                        }, facet, sceleton);
             }
             return tree;
         }

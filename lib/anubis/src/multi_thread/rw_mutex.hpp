@@ -5,6 +5,9 @@
 #ifndef ANUBIS_PROJECT_RW_MUTEX_HPP
 #define ANUBIS_PROJECT_RW_MUTEX_HPP
 
+#include <mutex>
+#include <condition_variable>
+
 class rw_mutex {
 public:
     rw_mutex();

@@ -204,7 +204,7 @@ std::vector<int> smith(stream<sparse<int>>& matrix) {
     });
 
     // Smith
-    
+
 
     return {};
 }

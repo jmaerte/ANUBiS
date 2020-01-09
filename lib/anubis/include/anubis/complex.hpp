@@ -24,7 +24,7 @@ namespace jmaerte {
         private:
 
             virtual stream<sparse<double>> laplacian(int i) = 0;
-//            virtual stream<sparse<double>> boundary(int dim) = 0;
+            virtual stream<sparse<int>> boundary(int dim) = 0;
 
         protected:
 
@@ -58,6 +58,9 @@ namespace jmaerte {
             stream<sparse<double>> laplacian(int i) override;
 
             std::pair<int, int> bit_position(int pos);
+            int get_simplex_size();
+
+            stream<sparse<int>> boundary(int dim) override;
 
             s_list(std::string name, int sceleton): complex(name, sceleton) {}
 
@@ -108,6 +111,8 @@ namespace jmaerte {
                 n->next = nullptr;
                 return n;
             }
+
+            stream<sparse<int>> boundary(int dim) override;
 
             s_tree(std::string name, int sceleton = -1);
 

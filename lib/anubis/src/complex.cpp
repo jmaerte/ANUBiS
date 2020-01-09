@@ -9,6 +9,7 @@
 #include "data_types/potence/potence.hpp"
 #include "multi_thread/thread_pool.hpp"
 #include <boost/regex.hpp>
+#include <memory>
 
 static const char LogTable256[256] = {
     #define LT(n) n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n
@@ -139,6 +140,81 @@ namespace jmaerte {
         }
 
 
+        /***************************************************************************************************************
+         * Helper-Methods for generate
+         **************************************************************************************************************/
+
+        void set(unsigned int * list, unsigned int * simplex, int pos, int SIMPLEX_SIZE) {
+            for (int i = 0; i < SIMPLEX_SIZE; i++) {
+                list[pos * SIMPLEX_SIZE + i] = simplex[i];
+            }
+        }
+
+        bool equals(unsigned int * a, unsigned int * b, int length) {
+            for (int i = 0; i < length; i++) {
+                if (a[i] != b[i]) return false;
+            }
+            return true;
+        }
+
+        unsigned int log_2(unsigned int v) {
+            unsigned int r;
+            unsigned int t, tt;
+
+            if ((tt = v >> 16) != 0) {
+                r = (t = tt >> 8) ? 24 + LogTable256[t] : 16 + LogTable256[tt];
+            } else {
+                r = (t = v >> 8) ? 8 + LogTable256[t] : LogTable256[v];
+            }
+            return r;
+        }
+
+        int compare_to(unsigned int * a, unsigned int * b, int length) {
+            unsigned int c;
+            for (int i = 0; i < length; i++) {
+                if ((c = a[i] ^ b[i]) != 0) {
+                    unsigned int mask = ((c - 1) | c) ^ (c - 1);
+                    return (a[i] & mask) == 0 ? 1 : -1;
+                }
+            }
+            return 0;
+        }
+
+        int binary_search(unsigned int * list, unsigned int * simplex, int list_size, int SIMPLEX_SIZE) {
+            if (list_size == 0 || compare_to(list + (list_size - 1) * SIMPLEX_SIZE, simplex, SIMPLEX_SIZE) < 0) return list_size;
+            if (compare_to(simplex, list, SIMPLEX_SIZE) < 0) return 0;
+            int min = 0;
+            int max = list_size;
+            int compare = 0;
+            while (min < max) {
+                int mid = (min + max)/2;
+                if ((compare = compare_to(list + mid * SIMPLEX_SIZE, simplex, SIMPLEX_SIZE)) < 0) min = mid + 1;
+                else if (compare > 0) max = mid;
+                else return mid;
+            }
+            return min;
+        }
+
+        int insert(unsigned int * a, int pos, unsigned int *& list, int occupation, int list_size, int SIMPLEX_SIZE) {
+            if (occupation >= list_size) {
+                auto * resized = new unsigned int[list_size * SIMPLEX_SIZE * 2];
+                std::copy(list, list + pos * SIMPLEX_SIZE, resized);
+                if (pos != list_size) {
+                    std::copy(list + pos * SIMPLEX_SIZE, list + occupation * SIMPLEX_SIZE, resized + (pos + 1) * SIMPLEX_SIZE);
+                }
+
+                delete[] list;
+                list = resized;
+                list_size *= 2;
+            } else {
+                if (pos < occupation){
+                    std::copy_backward(list + pos * SIMPLEX_SIZE, list + occupation * SIMPLEX_SIZE, list + (occupation + 1) * SIMPLEX_SIZE);
+                }
+            }
+            std::copy(a, a + SIMPLEX_SIZE, list + pos * SIMPLEX_SIZE);
+            return list_size;
+        }
+
 
         /***************************************************************************************************************
          * Complex implementations
@@ -171,6 +247,8 @@ namespace jmaerte {
                 f.resize(v->size());
             }
             facets.push_back(*v);
+            if (v->at(v->size() - 1) + 1 > vertices)
+                vertices = v->at(v->size() - 1) + 1;
         }
 
         void s_list::clear() {
@@ -181,10 +259,10 @@ namespace jmaerte {
         }
 
         void s_list::clear_map() {
-            for (auto pair : past) {
-                delete[] pair.second;
+            for (auto it = past.begin(); it != past.end(); it++) {
+                delete[] it->second;
             }
-            past = std::map<unsigned int, unsigned int *>{};
+            past.clear();
         }
 
         void s_list::clear_dim(unsigned int i) {
@@ -194,106 +272,40 @@ namespace jmaerte {
             past.erase(i);
         }
 
-        /**
-         * Helper-Methods for generate
-         */
-
-        void set(unsigned int * list, unsigned int * simplex, int pos, int SIMPLEX_SIZE) {
-            for (int i = 0; i < SIMPLEX_SIZE; i++) {
-                list[pos * SIMPLEX_SIZE + i] = simplex[i];
-            }
-        }
-
-        bool equals(unsigned int * a, unsigned int * b, int length) {
-            for (int i = 0; i < length; i++) {
-                if (a[i] != b[i]) return false;
-            }
-            return true;
-        }
-
-        unsigned int log_2(unsigned int v) {
-            unsigned int r;
-            unsigned int t, tt;
-
-            if ((tt = v >> 16) != 0) {
-                r = (t = tt >> 8) ? 24 + LogTable256[t] : 16 + LogTable256[tt];
-            } else {
-                r = (t = v >> 8) ? 8 + LogTable256[t] : LogTable256[v];
-            }
-            return r;
-        }
-
-        int compareTo(unsigned int * a, unsigned int * b, int length) {
-            unsigned int c;
-            for (int i = 0; i < length; i++) {
-                if ((c = a[i] ^ b[i]) != 0) {
-                    unsigned int mask = (c | (c - 1)) ^ c;
-                    return (a[i] & mask) == 0 ? -1 : 1;
-                }
-            }
-            return false;
-        }
-
-        int binary_search(unsigned int * list, unsigned int * simplex, int list_size, int SIMPLEX_SIZE) {
-            if (list_size == 0 || compareTo(list + (list_size - 1) * SIMPLEX_SIZE, simplex, SIMPLEX_SIZE) < 0) return list_size;
-            if (compareTo(simplex, list, SIMPLEX_SIZE) < 0) return 0;
-            int min = 0;
-            int max = list_size;
-            int compare = 0;
-            while (min < max) {
-                int mid = (min + max)/2;
-                if ((compare = compareTo(list + mid, simplex, SIMPLEX_SIZE)) < 0) min = mid + 1;
-                else if (compare > 0) max = mid;
-                else return mid;
-            }
-            return min;
-        }
-
-        int insert(unsigned int * a, int pos, unsigned int *& list, int occupation, int list_size, int SIMPLEX_SIZE) {
-            if (occupation + SIMPLEX_SIZE > list_size) {
-                auto resized = new unsigned int[list_size * SIMPLEX_SIZE * 2];
-                std::memcpy(list, resized, pos * SIMPLEX_SIZE);
-                if (pos != list_size) std::memcpy(list + pos * SIMPLEX_SIZE, resized + (pos + 1) * SIMPLEX_SIZE, (occupation - pos) * SIMPLEX_SIZE);
-                list = resized;
-                list_size *= 2;
-            } else {
-                std::memcpy(list + pos * SIMPLEX_SIZE, list + (pos + 1) * SIMPLEX_SIZE, (occupation - pos) * SIMPLEX_SIZE);
-            }
-            for (int i = 0; i < SIMPLEX_SIZE; i++) {
-                list[pos * SIMPLEX_SIZE + i] = a[i];
-            }
-            return list_size;
-        }
-
-        /**
-         * Back to s_list member functions
-         */
-
         unsigned int * s_list::generate(unsigned int dim) {
             if (past.find(dim) != past.end()) return past[dim];
-            int SIMPLEX_SIZE = vertices / UINT_SIZE;
-            if (vertices % UINT_SIZE != 0) SIMPLEX_SIZE++;
+            int SIMPLEX_SIZE = get_simplex_size();
 
-            int size = (f.size() <= dim || f[dim] == 0) ? 10 * SIMPLEX_SIZE :
-                f[dim] * SIMPLEX_SIZE;
-            auto list = new unsigned int[size];
+            int size = (f.size() <= dim || f[dim] == 0) ? 10 :
+                f[dim];
+            auto * list = new unsigned int[size * SIMPLEX_SIZE];
             int filled = 0;
             for (auto& facet : facets) {
-                potence<unsigned int> pot {facet, (int) dim};
-                while (!pot.done() && pot.order() == dim) {
-                    auto simplex = new unsigned int[SIMPLEX_SIZE];
-                    std::cout << filled << std::endl;
+                if (facet.size() < dim + 1) continue;
+                potence<unsigned int> pot {facet, (int) dim + 1};
+                while (!pot.done() && pot.order() == dim + 1) {
+                    auto * simplex = new unsigned int[SIMPLEX_SIZE];
+                    for (int i = 0; i < SIMPLEX_SIZE; i++) {
+                        simplex[i] = 0u;
+                    }
                     for (auto it = pot.begin(); it != pot.end(); ++it) {
                         simplex[*it / UINT_SIZE] |= 1u << (*it % UINT_SIZE);
                     }
                     int k = binary_search(list, simplex, filled, SIMPLEX_SIZE);
-                    if (k == filled || !equals(list + k, simplex, SIMPLEX_SIZE)) {
+                    if (k == filled || !equals(list + k * SIMPLEX_SIZE, simplex, SIMPLEX_SIZE)) {
                         size = insert(simplex, k, list, filled, size, SIMPLEX_SIZE);
                         filled++;
                     }
+                    delete[] simplex;
                     ++pot;
                 }
             }
+
+//            for (int j = 0; j < filled; j++) {
+//                unsigned int * simplex = list + SIMPLEX_SIZE * j;
+//                for (int i = 0; i < SIMPLEX_SIZE; i++) std::cout << std::bitset<32>(simplex[SIMPLEX_SIZE - i - 1]) << " ";
+//                std::cout << std::endl;
+//            }
             f[dim] = filled;
             past[dim] = list;
             return past[dim];
@@ -316,19 +328,55 @@ namespace jmaerte {
                     const std::string &set_closers
                 ) {
             return complex_from_file([](std::string name, int sceleton) {
-                        return new s_list(name, sceleton);
-                    }, path, sceleton, sep, set_openers, set_closers);
+                return new s_list(std::move(name), sceleton);
+            }, path, sceleton, sep, set_openers, set_closers);
         }
 
         s_list* s_list::from_facets(std::vector<std::vector<unsigned int> *> &facets, std::string name, int sceleton) {
             return complex_from_facets([](std::string name, int sceleton) {
-                return new s_list(name, sceleton);
-            }, facets, name, sceleton);
+                return new s_list(std::move(name), sceleton);
+            }, facets, std::move(name), sceleton);
         }
 
 
         s_list::~s_list() {
             clear_map();
+        }
+
+        stream<sparse<int>> s_list::boundary(int dim) {
+            assert(0 <= dim && dim < f.size());
+            if(f[dim] == 0) generate(dim);
+            if (dim > 0) {
+                if(f[dim - 1] == 0) generate(dim - 1);
+            }
+            int SIMPLEX_SIZE = get_simplex_size();
+            return dim == 0 ? transform(ints_from(0).take(f[dim]), [this](int i) {
+                return sparse<int>({{0, 1}}); // reduced boundary
+            }) : transform(ints_from(0).take(f[dim]), [this, dim, SIMPLEX_SIZE](int i) {
+                std::vector<std::pair<int, int>> vec {static_cast<std::size_t>(dim + 1)};
+                unsigned int * simplex = this->past[dim] + i * SIMPLEX_SIZE;
+                int curr_index = 0;
+                unsigned int curr = simplex[0];
+                unsigned int leading;
+                unsigned int temp;
+                for (int pos = 0; pos < dim + 1; pos++) {
+                    while (curr == 0) curr = simplex[++curr_index];
+                    leading = ((curr - 1) | curr) ^ (curr - 1);
+                    curr = curr ^ leading; // remove this leading bit from curr.
+                    temp = simplex[curr_index];
+                    simplex[curr_index] ^= leading;
+                    vec[pos] = {
+                            binary_search(this->past[dim - 1], simplex, f[dim - 1], SIMPLEX_SIZE),
+                            pos % 2 == 0 ? 1 : -1
+                    };
+                    simplex[curr_index] = temp;
+                }
+                return sparse<int>(vec);
+            });
+        }
+
+        int s_list::get_simplex_size() {
+            return vertices / UINT_SIZE + (vertices % UINT_SIZE == 0 ? 0 : 1);
         }
 
         /***************************************************************************************************************
@@ -404,103 +452,6 @@ namespace jmaerte {
 
         s_tree::s_tree(std::string name, int sceleton) : complex(name, sceleton) {}
 
-//        s_tree *s_tree::from_facets(std::vector<std::vector<int>*> facets, std::string name, int sceleton) {
-//            auto * tree = new s_tree(name, sceleton);
-//            for (const auto & facet : facets) {
-//                tree->facet_insert(facet);
-//            }
-//            return tree;
-//        }
-
-//        s_tree *s_tree::from_file(const std::string & path,
-//                int sceleton,
-//                const std::string & sep,
-//                const std::string & set_openers,
-//                const std::string & set_closers) {
-//            std::cout << "Opening file..." << std::endl;
-//            std::ifstream file;
-//            file.open(path);
-//            std::string content;
-//            if (file.is_open()) {
-//                content = {(std::istreambuf_iterator<char>(file)), (std::istreambuf_iterator<char>())};
-//            } else {
-//                std::cout << "[IO] Error: failed to open file!" << std::endl;
-//            }
-//            file.close();
-//            std::cout << "Read file..." << std::endl;
-//            size_t pos = content.find(" ");
-//
-//            while(pos != std::string::npos) {
-//                content.replace(pos, 1, "");
-//                pos = content.find(" ", pos);
-//            }
-//
-//            std::string name;
-//
-//            pos = content.find(":=");
-//            if (pos != std::string::npos) {
-//                name = content.substr(0, pos);
-//                content = content.substr(pos + 2, content.size());
-//            } else {
-//                pos = content.find('=');
-//                if (pos != std::string::npos) {
-//                    name = content.substr(0, pos);
-//                    content = content.substr(pos + 1, content.size());
-//                } else {
-//                    throw std::invalid_argument("Simplicial Complex file must have a name followed by '=' or ':='.");
-//                }
-//            }
-//
-//            std::cout << "Found name: " << name << std::endl;
-//
-//            content = content.substr(1, content.size() - 2);
-//
-//            boost::regex simplex("[" + set_openers + "](([\\[{][\\w" + sep + "]*[\\]}])|([\\w" + sep + "]*))*[" + set_closers + "]");
-//            boost::sregex_token_iterator iter(content.begin(), content.end(), simplex, 0);
-//            boost::sregex_token_iterator end;
-//
-//            std::map<std::string, int> labels;
-//            int i_labels = 0;
-//
-//            auto * tree = new s_tree(name, sceleton);
-//
-//            {
-//                thread_pool workers(-1);
-//
-//                while (iter != end) {
-//                    std::string s_facet = *iter;
-//                    s_facet = s_facet.substr(1, s_facet.size() - 2);
-//
-//                    boost::regex element("[" + set_openers + "][\\w,]*[" + set_closers + "]|[\\w]+");
-//                    boost::sregex_token_iterator element_iter(s_facet.begin(), s_facet.end(), element, 0);
-//                    boost::sregex_token_iterator element_end;
-//
-//                    auto facet = new std::vector<int>();
-//
-//                    while (element_iter != element_end) {
-//                        std::string curr = *element_iter;
-//                        if (labels.find(curr) == labels.end()) labels[curr] = i_labels++;
-//                        facet->push_back(labels[curr]);
-//                        element_iter++;
-//                    }
-//
-////                    std::cout << "Pushing " << s_facet << std::endl;
-//
-////                    tree->s_insert(facet, sceleton);
-//                    std::function<void()> fn = [tree, facet, sceleton]() {
-//                        tree->facet_insert(facet);
-//                    };
-//
-//                    workers.add_work(fn);
-//                    iter++;
-//                }
-//                std::cout << "pushed all" << std::endl;
-//            }
-//            std::cout << "processed all" << std::endl;
-//
-//            return tree;
-//        }
-
         s_tree::~s_tree() {
             delete head;
         }
@@ -521,6 +472,10 @@ namespace jmaerte {
             return complex_from_facets([](std::string name, int sceleton) {
                 return new s_tree(name, sceleton);
             }, facets, name, sceleton);
+        }
+
+        stream<sparse<int>> s_tree::boundary(int dim) {
+            return stream<sparse<int>>();
         }
 
         /***********************************************************************************************************

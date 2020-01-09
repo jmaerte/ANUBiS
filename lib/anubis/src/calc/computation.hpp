@@ -11,10 +11,13 @@
 #include <cassert>
 #include "../src/data_types/lazy/stream.hpp"
 #include "../src/data_types/lin/sparse.hpp"
+#include "utils.cpp"
 
 double machine_eps = 1e-8;
 
-// Auxiliary
+/***********************************************************************************************************************
+ * Auxiliary
+ **********************************************************************************************************************/
 
 double dot(const stream<double> & x, const stream<double> & y) {
     return zip(x, y, [](double a, double b) {
@@ -40,7 +43,9 @@ stream<double> scale(const stream<double> & v, const double n) {
     });
 }
 
-// Eigenvalues
+/***********************************************************************************************************************
+ * Eigenvalue algorithms
+ **********************************************************************************************************************/
 
 std::pair<std::vector<double>, std::vector<double>> lanczos(stream<sparse<double>> & matrix, int n) {
     stream<double> x = drand().take(n);
@@ -130,4 +135,52 @@ std::vector<double> QR(std::vector<double> & alpha, std::vector<double> & beta) 
 std::vector<double> eigen(stream<sparse<double>> && matrix, int n) {
     std::pair<std::vector<double>, std::vector<double>> tridiag = lanczos(matrix, n);
     return QR(tridiag.first, tridiag.second);
+}
+
+/***********************************************************************************************************************
+ * Elimination algorithms
+ **********************************************************************************************************************/
+
+int compare_to(const sparse<int>& a, const sparse<int>& b) {
+    return a[0] - b[0];
+};
+
+int compare_ints(const int& a, const int& b) {
+    return a - b;
+}
+
+void add (sparse<int>& apb, sparse<int>& a, int lambda, sparse<int>& b) {
+
+}
+
+std::vector<int> smith(stream<sparse<int>>& matrix) {
+    std::vector<sparse<int>> trivial;
+    std::vector<int> first;
+    std::vector<sparse<int>> remainder;
+
+    // Preprocessing
+    forEach(matrix, [&](sparse<int>& vec) {
+        int k = 0;
+        for (int i = 0; i < vec.non_zero();) {
+            k = binary_search(first, vec[i], k, first.size(), compare_ints);
+            if (k < first.size() && first[k] == vec[i]) {
+                add(vec, vec, - vec(i), trivial[k]);
+            } else i++;
+        }
+        if (vec.non_zero() == 0) return; // vector was linear combination of trivial ones.
+        if (vec(0) == 1 || vec(0) == -1) {
+            k = binary_search(first, vec[0], 0, first.size(), compare_ints);
+            trivial.insert(trivial.begin() + k, vec);
+            first.insert(first.begin() + k, vec[0]);
+            for (sparse<int>& v : remainder) {
+                int j = v.index(vec[0]);
+                if (j < v.non_zero() && v(j) == vec[0]) add(v, v, - v(j) * vec(0), vec);
+            }
+        }
+    });
+
+    // Smith
+
+
+    return {};
 }

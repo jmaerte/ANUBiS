@@ -149,8 +149,32 @@ int compare_ints(const int& a, const int& b) {
     return a - b;
 }
 
-void add (sparse<int>& apb, sparse<int>& a, int lambda, sparse<int>& b) {
-
+void add (sparse<int>& a, int lambda, sparse<int>& b) {
+    std::vector<std::pair<int, int>> res;
+    auto it_a = a.begin();
+    auto it_b = b.begin();
+    std::pair<int, int> tmp;
+    int calc = 0;
+    while (it_a != a.end() && it_b != b.end()) {
+        if (it_a->first < it_b->first) {
+            res.push_back(*it_a);
+        } else if (it_a -> first > it_b->first) {
+            tmp = *it_b;
+            tmp.second = lambda * tmp.second;
+            res.push_back(tmp);
+        } else {
+            if ((calc = it_a->second + lambda * it_b->second) != 0) {
+                res.emplace_back(it_a->first, calc);
+            }
+        }
+    }
+    while (it_a != a.end()) {
+        res.push_back(*it_a);
+    }
+    while (it_b != b.end()) {
+        res.emplace_back(it_b->first, lambda * it_b->second);
+    }
+    a.set(res);
 }
 
 std::vector<int> smith(stream<sparse<int>>& matrix) {
@@ -164,7 +188,7 @@ std::vector<int> smith(stream<sparse<int>>& matrix) {
         for (int i = 0; i < vec.non_zero();) {
             k = binary_search(first, vec[i], k, first.size(), compare_ints);
             if (k < first.size() && first[k] == vec[i]) {
-                add(vec, vec, - vec(i), trivial[k]);
+                add(vec, - vec(i), trivial[k]);
             } else i++;
         }
         if (vec.non_zero() == 0) return; // vector was linear combination of trivial ones.
@@ -174,13 +198,13 @@ std::vector<int> smith(stream<sparse<int>>& matrix) {
             first.insert(first.begin() + k, vec[0]);
             for (sparse<int>& v : remainder) {
                 int j = v.index(vec[0]);
-                if (j < v.non_zero() && v(j) == vec[0]) add(v, v, - v(j) * vec(0), vec);
+                if (j < v.non_zero() && v(j) == vec[0]) add(v, - v(j) * vec(0), vec);
             }
         }
     });
 
     // Smith
-
+    
 
     return {};
 }

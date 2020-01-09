@@ -18,6 +18,9 @@ public:
     int non_zero() const;
 
     int index(int i) const;
+    void set(std::vector<std::pair<int, T>>& n_vec) {
+        vec = n_vec;
+    }
 
     typename std::vector<std::pair<int, T>>::iterator begin() const {
         return vec.begin();

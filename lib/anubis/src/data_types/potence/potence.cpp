@@ -4,9 +4,12 @@
 
 #include "potence.hpp"
 
-
 template<typename T>
-potence<T>::potence(const std::vector<T> & v): mask(v.size()), k(0), N(v.size()), masked(v) {}
+potence<T>::potence(const std::vector<T> & v, int k): mask(v.size()), k(k), N(v.size()), masked(v) {
+    for (int i = 0; i < k; i++) {
+        mask[i] = i;
+    }
+}
 
 template<typename T>
 void potence<T>::operator++() {
@@ -42,3 +45,12 @@ template<typename T>
 bool potence<T>::done() {
     return _done;
 }
+
+
+
+/**
+* Compiler requires the explicit statement for compiling these template specializations:
+*/
+
+template class potence<int>;
+template class potence<unsigned int>;

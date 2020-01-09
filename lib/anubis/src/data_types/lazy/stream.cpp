@@ -2,8 +2,6 @@
 // Created by jmaerte on 28.11.19.
 //
 
-#include "stream.hpp"
-
 template<typename T>
 T next<T>::val() const {
     return _v;

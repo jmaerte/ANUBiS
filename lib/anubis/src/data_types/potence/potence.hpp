@@ -10,12 +10,13 @@
 template<typename T>
 class potence {
 private:
-    std::vector<int> mask, masked;
+    std::vector<int> mask;
+    std::vector<T> masked;
     bool _done = false;
     int k, N;
 public:
 
-    class iterator : public std::iterator<std::forward_iterator_tag, int> {
+    class iterator : public std::iterator<std::forward_iterator_tag, T> {
         int i;
         potence * p;
 
@@ -31,12 +32,12 @@ public:
         bool operator!=(const iterator& rhs) {
             return i != rhs.i || p != rhs.p;
         }
-        int& operator*() {
+        T& operator*() {
             return p->masked[p->mask[i]];
         }
     };
 
-    potence(const std::vector<T> &);
+    explicit potence(const std::vector<T> &, int k = 0);
 
     bool done();
     void operator++();
@@ -45,7 +46,7 @@ public:
         return k;
     }
 
-    int get(int i) {
+    T get(int i) {
         return masked[mask[i]];
     }
 
@@ -58,6 +59,4 @@ public:
     }
 };
 
-
-#include "potence.cpp"
 #endif //ANUBIS_PROJECT_POTENCE_HPP

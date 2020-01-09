@@ -7,6 +7,8 @@
 
 #include <mutex>
 #include <condition_variable>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/condition_variable.hpp>
 
 class rw_mutex {
 public:
@@ -21,9 +23,9 @@ public:
     void unlock_write();
 
 private:
-    std::mutex shared;
-    std::condition_variable reader;
-    std::condition_variable writer;
+    boost::mutex shared;
+    boost::condition_variable reader;
+    boost::condition_variable writer;
     int active_readers;
     int waiting_writers;
     int active_writers;

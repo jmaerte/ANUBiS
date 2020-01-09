@@ -14,5 +14,3 @@ public:
     sparse();
     sparse(std::vector<std::pair<int, T>>);
 };
-
-#include "sparse.cpp"

@@ -3,13 +3,12 @@
 //
 
 #include <cassert>
-#include "anubis/complex.hpp"
+#include "ANUBiS/complex.hpp"
 #include "data_types/lin/sparse.hpp"
 #include "calc/computation.hpp"
 #include "data_types/potence/potence.hpp"
 #include "multi_thread/thread_pool.hpp"
 #include <boost/regex.hpp>
-#include <memory>
 
 static const char LogTable256[256] = {
     #define LT(n) n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n
@@ -44,7 +43,7 @@ namespace jmaerte {
             if (file.is_open()) {
                 content = {(std::istreambuf_iterator<char>(file)), (std::istreambuf_iterator<char>())};
             } else {
-                std::cout << "[IO] Error: failed to open file!" << std::endl;
+                throw std::invalid_argument("[IO] Error: failed to open file!");
             }
             file.close();
             std::cout << "Read file..." << std::endl;

@@ -9,9 +9,10 @@
 #include <algorithm>
 #include <cmath>
 #include <cassert>
+#include <map>
 #include "../src/data_types/lazy/stream.hpp"
 #include "../src/data_types/lin/sparse.hpp"
-#include "utils.cpp"
+#include "utils.hpp"
 
 double machine_eps = 1e-8;
 
@@ -177,13 +178,13 @@ void add (sparse<int>& a, int lambda, sparse<int>& b) {
     a.set(res);
 }
 
-std::vector<int> smith(stream<sparse<int>>& matrix) {
+std::map<int, unsigned int> smith(stream<sparse<int>>& matrix) {
     std::vector<sparse<int>> trivial;
     std::vector<int> first;
     std::vector<sparse<int>> remainder;
 
     // Preprocessing
-    forEach(matrix, [&](sparse<int>& vec) {
+    forEach(matrix, [&](sparse<int> vec) {
         int k = 0;
         for (int i = 0; i < vec.non_zero();) {
             k = binary_search(first, vec[i], k, first.size(), compare_ints);

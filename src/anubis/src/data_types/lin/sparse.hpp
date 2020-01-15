@@ -22,11 +22,11 @@ public:
         vec = n_vec;
     }
 
-    typename std::vector<std::pair<int, T>>::iterator begin() const {
+    typename std::vector<std::pair<int, T>>::const_iterator begin() const {
         return vec.begin();
     }
 
-    typename std::vector<std::pair<int, T>>::iterator end() const {
+    typename std::vector<std::pair<int, T>>::const_iterator end() const {
         return vec.end();
     }
 

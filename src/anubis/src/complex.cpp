@@ -500,6 +500,11 @@ namespace jmaerte {
             if (children.find(*it) == children.end()) {
                 children[*it] = get_node();
                 lockGuard.unlock();
+                /** Alternative way (lock-free):
+                 * children an array instead of a map.
+                 * each process holds his own pointer to a new node.
+                 * When a process inserts a new child it uses new_node = std::atomic_compare_exchange_weak(children[i], nullptr, new_node)
+                 */
                 return children[*it]->_insert(++it, end, children[*it]);
             }
             lockGuard.unlock();

@@ -179,33 +179,35 @@ void add (sparse<int>& a, int lambda, sparse<int>& b) {
 }
 
 std::map<int, unsigned int> smith(stream<sparse<int>>& matrix) {
-    std::vector<sparse<int>> trivial;
-    std::vector<int> first;
     std::vector<sparse<int>> remainder;
-
-    // Preprocessing
-    forEach(matrix, [&](sparse<int> vec) {
-        int k = 0;
-        for (int i = 0; i < vec.non_zero();) {
-            k = binary_search(first, vec[i], k, first.size(), compare_ints);
-            if (k < first.size() && first[k] == vec[i]) {
-                add(vec, - vec(i), trivial[k]);
-            } else i++;
-        }
-        if (vec.non_zero() == 0) return; // vector was linear combination of trivial ones.
-        if (vec(0) == 1 || vec(0) == -1) {
-            k = binary_search(first, vec[0], 0, first.size(), compare_ints);
-            trivial.insert(trivial.begin() + k, vec);
-            first.insert(first.begin() + k, vec[0]);
-            for (sparse<int>& v : remainder) {
-                int j = v.index(vec[0]);
-                if (j < v.non_zero() && v(j) == vec[0]) add(v, - v(j) * vec(0), vec);
+    std::map<int, unsigned int> result;
+    {
+        std::vector<sparse<int>> trivial;
+        std::vector<int> first;
+        // Preprocessing
+        forEach(matrix, [&](sparse<int> vec) {
+            int k = 0;
+            for (int i = 0; i < vec.non_zero();) {
+                k = binary_search(first, vec[i], k, first.size(), compare_ints);
+                if (k < first.size() && first[k] == vec[i]) {
+                    add(vec, - vec(i), trivial[k]);
+                } else i++;
             }
-        }
-    });
+            if (vec.non_zero() == 0) return; // vector was linear combination of trivial ones.
+            if (vec(0) == 1 || vec(0) == -1) {
+                k = binary_search(first, vec[0], 0, first.size(), compare_ints);
+                trivial.insert(trivial.begin() + k, vec);
+                first.insert(first.begin() + k, vec[0]);
+                for (sparse<int>& v : remainder) {
+                    int j = v.index(vec[0]);
+                    if (j < v.non_zero() && v(j) == vec[0]) add(v, - v(j) * vec(0), vec);
+                }
+            }
+        });
+        result = {{1, first.size()}};
+    }
 
     // Smith
 
-
-    return {};
+    return result;
 }

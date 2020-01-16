@@ -43,25 +43,6 @@ if(NOT CMAKE_CONFIGURATION_TYPES)
     endif()
 endif()
 
-
-## Compile Boost dynamically (platform independent)
-set(BOOST_VERSION 1.72.0)
-string(REPLACE "." "_" BOOST_URL_VERSION ${BOOST_VERSION})
-
-IF(WIN32)
-    set(BOOST_COMPRESSION "zip")
-    set(BOOST_SHA256 8c20440aaba21dd963c0f7149517445f50c62ce4eb689df2b5544cc89e6e621e)
-ELSEIF(UNIX)
-    set(BOOST_COMPRESSION "tar.bz2")
-    set(BOOST_SHA256 59c9b274bc451cf91a9ba1dd2c7fdcaf5d60b1b3aa83f2c9fa143417cc660722)
-ENDIF()
-
-set(BOOST_URL "https://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_${BOOST_URL_VERSION}.${BOOST_COMPRESSION}")
-
-set(BOOST_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/third_party/boost_${BOOST_URL_VERSION})
-set(BOOST_INCLUDE_DIR ${BOOST_INSTALL}/include)
-set(BOOST_LIB_DIR ${BOOST_INSTALL}/lib)
-
 add_subdirectory(src)
 
 include(InstallBasicPackageFiles)

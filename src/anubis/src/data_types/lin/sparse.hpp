@@ -22,6 +22,16 @@ public:
         vec = n_vec;
     }
 
+    void remove(int i) {
+        int k = index(i);
+        vec.erase(vec.begin() + i);
+    }
+
+    void insert(int k, int i, int value) {
+        if (value == 0) return;
+        vec.insert(vec.begin() + k, std::make_pair(i, value));
+    }
+
     typename std::vector<std::pair<int, T>>::const_iterator begin() const {
         return vec.begin();
     }
@@ -30,11 +40,15 @@ public:
         return vec.end();
     }
 
-    int operator [](int i) const    {
+    int operator [](int i) const {
         return vec[i].first;
     }
 
-    T operator ()(int i) const    {
+    T operator ()(int i) const {
         return vec[i].second;
+    }
+
+    T& get(int pos) {
+        return vec[pos].second;
     }
 };

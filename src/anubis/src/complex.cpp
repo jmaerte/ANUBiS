@@ -378,6 +378,27 @@ namespace jmaerte {
             return vertices / UINT_SIZE + (vertices % UINT_SIZE == 0 ? 0 : 1);
         }
 
+        std::map<int, unsigned int> s_list::homology(int dim) {
+            auto it_dim = smith_forms.find(dim);
+            if (it_dim == smith_forms.end()) smith_forms.emplace(dim, smith(boundary(dim)));
+            auto d_map = it_dim->second;
+            it_dim = smith_forms.find(dim - 1);
+            if (it_dim == smith_forms.end()) smith_forms.emplace(dim - 1, smith(boundary(dim - 1)));
+            auto d_m_map = it_dim->second;
+            int rank_low = 0;
+            for (auto kv : d_m_map) {
+                rank_low += kv.second;
+            }
+            int rank = f[dim] - rank_low;
+            std::map<int, unsigned int> result = d_map;
+            int rank_high = 0;
+            for (auto kv : d_map) {
+                rank_high += kv.second;
+            }
+            if (rank - rank_high != 0) result.emplace(1, rank - rank_high);
+            return result;
+        }
+
         /***************************************************************************************************************
          * s_tree implementations
          **************************************************************************************************************/
@@ -475,6 +496,10 @@ namespace jmaerte {
 
         stream<sparse<int>> s_tree::boundary(int dim) {
             return stream<sparse<int>>();
+        }
+
+        std::map<int, unsigned int> s_tree::homology(int i) {
+            return std::map<int, unsigned int>();
         }
 
         /***********************************************************************************************************

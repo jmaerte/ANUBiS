@@ -34,6 +34,8 @@ int main() {
     c->generate(6);
     c->generate(7);
 
+    c->homology(2);
+
     for (auto i : c->f_vector()) {
         std::cout << i << std::endl;
     }

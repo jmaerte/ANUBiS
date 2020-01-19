@@ -23,7 +23,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-option(BUILD_SHARED_LIBS "Build libraries as shared ones." ON)
+option(BUILD_SHARED_LIBS "Build libraries as shared ones." OFF)
 
 option(BUILD_TESTING "Create tests using CMake" OFF)
 if(BUILD_TESTING)
@@ -42,6 +42,9 @@ if(NOT CMAKE_CONFIGURATION_TYPES)
         set_property(CACHE CMAKE_BUILD_TYPE PROPERTY VALUE "Release")
     endif()
 endif()
+
+include(cmake/external/CMakeLists.txt)
+include(cmake/external/ExternalBoost.cmake)
 
 add_subdirectory(src)
 

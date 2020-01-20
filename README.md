@@ -18,7 +18,22 @@ A full documentation can be found under
 
 ## Installation
 
-## Built With
+ANUBiS comes with precompiled binaries for Ubuntu and Windows.
+
+### Building it yourself
+
+To build ANUBiS you just need to clone this repository. Since this is a CMake Project you only need to run
+
+```
+git clone https://github.com/jmaerte/ANUBiS.git
+cd ANUBiS
+mkdir build
+cmake --build <path/to/project>/build --target ANUBiS -- -j 4
+cd build
+make SHELL=<cmd/sh>
+```
+
+Remember to prepend `sudo` when necessary! The Shell command is necessary if you are on windows and have a sh.exe in your PATH environment variable. You should set it to cmd.exe then.
 
 ## License
 

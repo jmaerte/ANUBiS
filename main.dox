@@ -1,0 +1,15 @@
+/*! \mainpage ANUBiS - Assemblage of Numerous Utilities for Big Simplicial data structures
+ *
+ * \section Introduction
+ * Welcome to ANUBiS.
+ *
+ * ANUBiS is a high performance simplicial topology library that can either be imported by any of your C++
+ * applications as a shared library or can be used as a module of python code.
+ * The main object of interest is the Simplicial Complex of which we offer functions to calculate homology (over Z and
+ * finite fields) and their simplicial laplacian spectra.
+ *
+ * \section Documentation
+ *
+ *
+ * Click on classes (above) to get detailed documentation of the classes.
+*/

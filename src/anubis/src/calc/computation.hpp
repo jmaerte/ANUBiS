@@ -184,16 +184,20 @@ std::map<int, unsigned int> smith(stream<sparse<int>>&& matrix) {
     {
         std::vector<sparse<int>> trivial;
         std::vector<int> first;
+        int count = 0;
         // Preprocessing
-        forEach(matrix, [&](sparse<int> vec) {
+        while (!matrix.is_empty()) {
+            sparse<int> vec = matrix.get();
+            matrix = matrix.pop_front();
             int k = 0;
             for (int i = 0; i < vec.non_zero();) {
+                std::cout << vec.non_zero() << std::endl;
                 k = binary_search(first, vec[i], k, first.size(), compare_ints);
                 if (k < first.size() && first[k] == vec[i]) {
                     add(vec, - vec(i), trivial[k]);
                 } else i++;
             }
-            if (vec.non_zero() == 0) return; // vector was linear combination of trivial ones.
+            if (vec.non_zero() == 0) continue; // vector was linear combination of trivial ones.
             if (vec(0) == 1 || vec(0) == -1) {
                 k = binary_search(first, vec[0], 0, first.size(), compare_ints);
                 trivial.insert(trivial.begin() + k, vec);
@@ -203,7 +207,7 @@ std::map<int, unsigned int> smith(stream<sparse<int>>&& matrix) {
                     if (j < v.non_zero() && v(j) == vec[0]) add(v, - v(j) * vec(0), vec);
                 }
             }
-        });
+        }
         result = {{1, first.size()}};
     }
 

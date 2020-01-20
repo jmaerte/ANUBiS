@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 
-# This variable should contain the argument of the project call in the main CMakeLists.txt
-set(ORIGINAL_PROJECT_NAME "LibTemplateCMake")
-project(${ORIGINAL_PROJECT_NAME}Docs)
+set(ORIGINAL_PROJECT_NAME "ANUBiS")
+project(${ORIGINAL_PROJECT_NAME}_Docs)
 
 include(GNUInstallDirs)
 
@@ -11,25 +10,23 @@ find_package(Doxygen QUIET)
 if(DOXYGEN_FOUND)
     # This variables are used inside the Doxyfile.in template
     set(DOXYGEN_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}" CACHE STRING "Build directory for Doxygen html output (absolute).")
-    set(DOXYGEN_INSTALL_DIR "${CMAKE_INSTALL_DATAROOTDIR}/doc/${ORIGINAL_PROJECT_NAME}" CACHE STRING "Installation directory for Doxygen html output (relative to CMAKE_INSTALL_PREFIX).")
+    set(DOXYGEN_INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/doc/${ORIGINAL_PROJECT_NAME}" CACHE STRING "Installation directory for Doxygen html output (relative to CMAKE_INSTALL_PREFIX).")
     get_filename_component(ORIGINAL_PROJECT_DIR "${CMAKE_CURRENT_SOURCE_DIR}" DIRECTORY)
-    set(DOXYGEN_SOURCE_DIR "${ORIGINAL_PROJECT_DIR}/src")
+    set(DOXYGEN_SOURCE_DIR "${ORIGINAL_PROJECT_DIR}/src/anubis/include")
     set(DOXYGEN_DOC_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
+    set(DOXYGEN_OUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
 
-    # Generate the doxygen configuration file used by the
-    # document generation. This step permits to use cmake variable
-    # such as @ORIGINAL_PROJECT_NAME@ in the Doxyfile.in template
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${DOXYGEN_OUT_FILE} @ONLY)
 
-    # The dox target will generate the doxygen documentation in ${DOXYGEN_BUILD_DIR}
-    add_custom_target(dox COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-            COMMENT "Generating doxygen documentation in ${DOXYGEN_BUILD_DIR}")
+    add_custom_target(dox ALL
+            COMMAND doxygen ${DOXYGEN_OUT_FILE}
+            COMMENT "Generating doxygen documentation in ${DOXYGEN_BUILD_DIR}"
+            VERBATIM)
 
-    # Note: the install will install the documentation if present,
-    # but it will not trigger a regeneration of the documentation if it is outdated
     install(DIRECTORY ${DOXYGEN_BUILD_DIR}/html
-            DESTINATION ${DOXYGEN_INSTALL_DIR}
-            OPTIONAL)
-
+            DESTINATION ${DOXYGEN_INSTALL_DIR})
+    message(STATUS "Documentation can be found in ${DOXYGEN_BUILD_DIR}")
+else()
+    MESSAGE(SEND_ERROR "Doxygen not found!")
 endif()

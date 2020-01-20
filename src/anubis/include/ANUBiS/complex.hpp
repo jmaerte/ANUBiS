@@ -20,6 +20,14 @@ class stream;
 namespace jmaerte {
     namespace anubis {
 
+        /** @brief Virtual class abstraction of a simplicial complex. It guarentees us, that non-abstract child classes
+         * enable us to calculate their homology and laplacian spectrum.
+
+        A Simplicial Complex K is a collection of simplices, such that a pair of distinct ones always share a common face
+         or are disjoint.
+        @author Julian Märte
+        @date January 2020
+        */
         class complex {
         private:
 

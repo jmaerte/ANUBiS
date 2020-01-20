@@ -7,13 +7,12 @@ set(BOOST_LIBRARIES
         regex
         thread)
 
-
-find_package(Boost ${BOOST_VERSION} COMPONENTS ${BOOST_LIBRARIES})
+find_package(Boost ${BOOST_VERSION} COMPONENTS ${BOOST_LIBRARIES} QUIET)
 
 if (Boost_FOUND)
     set(BOOST_INCLUDE_DIR ${Boost_INCLUDE_DIRS})
     set(BOOST_LIBRARY_DIR ${Boost_LIBRARY_DIRS})
-    message(STATUS "Found Boost static libs.")
+    message(STATUS "Found Boost static libs; version ${Boost_VERSION}")
 else()
     string(REPLACE "." "_" BOOST_UNDERSCORE_VERSION ${BOOST_VERSION})
 
@@ -106,4 +105,5 @@ else()
     set(BOOST_LIBRARY_DIR ${INSTALL_DEPENDENCIES_DIR}/libboost/lib)
 
     message(STATUS "Boost static libs ${BOOST_LIBRARIES} installed to ${INSTALL_DEPENDENCIES_DIR}")
+    message(STATUS "To import boost you must include the directory ${BOOST_INCLUDE_DIR} and link the directory ${BOOST_LIBRARY_DIR}.")
 endif(Boost_FOUND)

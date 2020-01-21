@@ -30,10 +30,21 @@ cd ANUBiS
 mkdir build
 cmake --build <path/to/project>/build --target ANUBiS -- -j 4
 cd build
-make SHELL=<cmd/sh>
+make
 ```
 
-Remember to prepend `sudo` when necessary! The Shell command is necessary if you are on windows and have a sh.exe in your PATH environment variable. You should set it to cmd.exe then.
+Remember to prepend `sudo` when necessary! The Shell command is necessary if you are on windows and have a sh.exe in your PATH environment variable. You should set it to cmd
+
+Be aware that when building with MinGW on Windows you should not have a sh.exe in your PATH environment variable (this is due to MinGW). This can happen when you have installed git on your machine. Here are some Solutions and cases in which they function:
+
+**If you are permitted to change system variables:**
+Remove the path containing sh.exe from the PATH variable.
+
+**You are building the project in the console:**
+Append `SHELL=cmd` to the make command.
+
+**You are using an IDE that does not let you set flags for the make command:**
+Set the user environment variable `MAKEFLAGS=SHELL=cmd`.
 
 ## License
 

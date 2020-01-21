@@ -7,6 +7,8 @@ set(BOOST_LIBRARIES
         regex
         thread)
 
+set(BOOST_WIN32_COMPILER gcc) # using MinGW
+
 find_package(Boost ${BOOST_VERSION} COMPONENTS ${BOOST_LIBRARIES} QUIET)
 
 if (Boost_FOUND)
@@ -41,18 +43,25 @@ else()
 
     set(BOOST_URL "https://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_${BOOST_UNDERSCORE_VERSION}.${BOOST_COMPRESSION}")
 
+    if (WIN32)
+        if (MSVC_VERSION EQUAL 1500) #VS2008
+            set(BOOST_TOOLSET "--toolset=msvc-9.0")
+        elseif(MSVC_VERSION EQUAL 1600) #VS2010
+            set(BOOST_TOOLSET "--toolset=msvc-10.0")
+        elseif(MSVC_VERSION EQUAL 1700) #VS2012
+            set(BOOST_TOOLSET "--toolset=msvc-11.0")
+        elseif(MSVC_VERSION EQUAL 1800) #VS2013
+            set(BOOST_TOOLSET "--toolset=msvc-12.0")
+        elseif(MSVC_VERSION EQUAL 1900) #VS2015
+            set(BOOST_TOOLSET "--toolset=msvc-14.0")
+        endif(MSVC_VERSION EQUAL 1500)
 
-    if (MSVC_VERSION EQUAL 1500) #VS2008
-        set(BOOST_TOOLSET "--toolset=msvc-9.0")
-    elseif(MSVC_VERSION EQUAL 1600) #VS2010
-        set(BOOST_TOOLSET "--toolset=msvc-10.0")
-    elseif(MSVC_VERSION EQUAL 1700) #VS2012
-        set(BOOST_TOOLSET "--toolset=msvc-11.0")
-    elseif(MSVC_VERSION EQUAL 1800) #VS2013
-        set(BOOST_TOOLSET "--toolset=msvc-12.0")
-    elseif(MSVC_VERSION EQUAL 1900) #VS2015
-        set(BOOST_TOOLSET "--toolset=msvc-14.0")
-    endif(MSVC_VERSION EQUAL 1500)
+        if (MINGW)
+            set(BOOST_TOOLSET "--toolset=gcc")
+        endif()
+    elseif(LINUX)
+        set(BOOST_TOOLSET "--toolset=gcc")
+    endif()
 
     if(${BUILD_SHARED_LIBS} MATCHES OFF)
         set(BUILD_LIBS "static")
@@ -61,9 +70,9 @@ else()
     endif()
 
 
-    set(BOOST_INSTALL ${INSTALL_DEPENDENCIES_DIR}/libboost)
+    set(BOOST_INSTALL ${INSTALL_DEPENDENCIES_DIR}/Boost)
     set(BOOST_INCLUDE_DIR ${BOOST_INSTALL}/include)
-    set(BOOST_LIB_DIR ${BOOST_INSTALL}/lib)
+    set(BOOST_LIB_DIR ${BOOST_INSTALL}/src/Boost/libs)
 
     set(BOOST_UNDERSCORE_LIBRARIES ${BOOST_LIBRARIES})
     list(TRANSFORM BOOST_UNDERSCORE_LIBRARIES REPLACE "-" "_")
@@ -85,24 +94,37 @@ else()
     #ENDIF ()
 
     ExternalProject_Add(		Boost
-            PREFIX 				Boost
+            PREFIX 				${BOOST_INSTALL}
             URL 				${BOOST_URL}
             URL_HASH 			SHA256=${BOOST_SHA256}
             BUILD_IN_SOURCE 	1
-            CONFIGURE_COMMAND 	${BOOST_BOOTSTRAP_COMMAND} ${BOOST_LIBRARIES_WITH} --prefix=${INSTALL_DEPENDENCIES_DIR}/libboost/lib
-            BUILD_COMMAND 		${BOOST_B2_COMMAND} install -q -j8 --prefix=${INSTALL_DEPENDENCIES_DIR}/libboost --abbreviate-paths --hash --enable-shared --enable-pic variant=release threading=multi ${BOOST_LIBRARIES_ADD} address-model=${BOOST_ADR_MODEL} link=${BUILD_LIBS} runtime-link=${BUILD_LIBS} ${BOOST_TOOLSET} ${BOOST_FLAGS}
-            INSTALL_COMMAND 	""
-            INSTALL_DIR 		${BOOST_INSTALL})
+            CONFIGURE_COMMAND 	${BOOST_BOOTSTRAP_COMMAND} ${BOOST_LIBRARIES_WITH} --toolset=gcc
+            BUILD_COMMAND 		${BOOST_B2_COMMAND} install
+                                    ${BOOST_TOOLSET}                # toolset to use (mingw,...)
+                                    -q                              # QUIET
+                                    -j8                             # 8 THREADS
+                                    --abbreviate-paths              # ON SOME SYSTEMS CMAKE CANT HANDLE LONG PATHS
+                                    --hash                          # -"-
+                                    --enable-shared                 # needed on windows to enable link=shared
+                                    --enable-pic                    # needed on windows for position independent code
+                                    variant=release                 # build variant
+                                    threading=multi                 # threading
+                                    ${BOOST_LIBRARIES_ADD}          # library list to add from boost
+                                    address-model=${BOOST_ADR_MODEL}# Address model
+                                    link=${BUILD_LIBS}              # shared or static linking
+                                    runtime-link=${BUILD_LIBS}      # shared or static runtime linking
+                                    ${BOOST_FLAGS}                  # platform dependent flags like fPIC
+            INSTALL_COMMAND 	"")
     set_property(TARGET Boost PROPERTY POSITION_INDEPENDENT_CODE TRUE)
 
     if( WIN32 )
-        set(BOOST_INCLUDE_DIR ${INSTALL_DEPENDENCIES_DIR}/libboost/include/Boost)
-        set(BOOST_ROOT ${INSTALL_DEPENDENCIES_DIR}/libboost)
+        set(BOOST_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/${BOOST_INSTALL}/src/Boost)
+        set(BOOST_ROOT ${CMAKE_SOURCE_DIR}/${BOOST_INSTALL}/src/Boost)
     else()
-        set(BOOST_INCLUDE_DIR ${INSTALL_DEPENDENCIES_DIR}/libboost/include)
+        set(BOOST_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/${BOOST_INSTALL}/src/Boost)
     endif()
 
-    set(BOOST_LIBRARY_DIR ${INSTALL_DEPENDENCIES_DIR}/libboost/lib)
+    set(BOOST_LIBRARY_DIR ${CMAKE_SOURCE_DIR}/${BOOST_INSTALL}/src/Boost/libs)
 
     message(STATUS "Boost static libs ${BOOST_LIBRARIES} installed to ${INSTALL_DEPENDENCIES_DIR}")
     message(STATUS "To import boost you must include the directory ${BOOST_INCLUDE_DIR} and link the directory ${BOOST_LIBRARY_DIR}.")

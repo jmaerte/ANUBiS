@@ -5,10 +5,10 @@
 #include "thread_pool.hpp"
 
 template<typename F, typename... Args>
-auto thread_pool::add_job(F &&fn, Args &&... args) -> boost::future<typename boost::result_of<F(Args...)>::type> {
+auto thread_pool::add_job(F &&fn, Args &&... args) -> boost::unique_future<typename boost::result_of<F(Args...)>::type> {
     using return_type = typename std::result_of<F(Args...)>::type;
     auto task = std::make_shared<boost::packaged_task<return_type()>>(std::bind(std::forward<F>(fn), std::forward<Args>(args)...));
-    boost::future<return_type> result = task->get_future();
+    boost::unique_future<return_type> result = task->get_future();
     while (tasks.size() >= max_tasks) {}
     tasks.push([task]() {*task();});
     return result;

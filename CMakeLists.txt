@@ -1,67 +1,80 @@
-cmake_minimum_required(VERSION 3.5)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
 
-project(ANUBiS
-        LANGUAGES CXX C
-        VERSION 0.1)
+SET(CMAKE_CXX_STANDARD 14)
+SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-include(GNUInstallDirs)
+# Declarations
+INCLUDE(${CMAKE_SOURCE_DIR}/cmake/DeclareGlobals.cmake)
+INCLUDE(${CMAKE_SOURCE_DIR}/cmake/DeclareIncludes.cmake)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
+# Superbuild scripts
+OPTION(USE_SUPERBUILD "Build superbuilds first" ON)
 
-set(BUILD_DOCS OFF)
+IF(USE_SUPERBUILD)
+    PROJECT(ANUBiS_Superbuild NONE)
+    INCLUDE(cmake/external/External.cmake)
+    RETURN()
+ELSE()
+    PROJECT(ANUBiS
+            LANGUAGES CXX C
+            VERSION 0.1)
+ENDIF()
 
-set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+INCLUDE(GNUInstallDirs)
 
-if(MSVC)
-    set(CMAKE_DEBUG_POSTFIX "d")
-endif()
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+SET(BUILD_DOCS OFF)
 
-set(CMAKE_C_EXTENSIONS OFF)
-set(CMAKE_CXX_EXTENSIONS OFF)
+SET(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+IF(MSVC)
+    SET(CMAKE_DEBUG_POSTFIX "d")
+ENDIF()
 
-option(BUILD_SHARED_LIBS "Build libraries as shared ones." OFF)
+SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-option(BUILD_TESTING "Create tests using CMake" OFF)
+SET(CMAKE_C_EXTENSIONS OFF)
+SET(CMAKE_CXX_EXTENSIONS OFF)
+
+# LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+OPTION(BUILD_SHARED_LIBS "Build libraries as shared ones." OFF)
+
+OPTION(BUILD_TESTING "Create tests using CMake" OFF)
 if(BUILD_TESTING)
-    enable_testing()
+    ENABLE_TESTING()
 endif()
 
-include(AddInstallRPATHSupport)
-add_install_rpath_support(BIN_DIRS "${CMAKE_INSTALL_FULL_BINDIR}"
+INCLUDE(${CMAKE_SOURCE_DIR}/cmake/AddInstallRPATHSupport.cmake)
+ADD_INSTALL_RPATH_SUPPORT(BIN_DIRS "${CMAKE_INSTALL_FULL_BINDIR}"
         LIB_DIRS "${CMAKE_INSTALL_FULL_LIBDIR}"
         INSTALL_NAME_DIR "${CMAKE_INSTALL_FULL_LIBDIR}"
         USE_LINK_PATH)
 
-if(NOT CMAKE_CONFIGURATION_TYPES)
-    if(NOT CMAKE_BUILD_TYPE)
-        message(STATUS "Setting build type to 'Release' as none was specified.")
-        set_property(CACHE CMAKE_BUILD_TYPE PROPERTY VALUE "Release")
-    endif()
-endif()
+IF(NOT CMAKE_CONFIGURATION_TYPES)
+    IF(NOT CMAKE_BUILD_TYPE)
+        MESSAGE(STATUS "Setting build type to 'Release' as none was specified.")
+        SET_PROPERTY(CACHE CMAKE_BUILD_TYPE PROPERTY VALUE "Release")
+    ENDIF()
+ENDIF()
 
-include(cmake/external/CMakeLists.txt)
-include(cmake/external/ExternalBoost.cmake)
+ADD_SUBDIRECTORY(src)
 
-add_subdirectory(src)
-
-include(InstallBasicPackageFiles)
-install_basic_package_files(${PROJECT_NAME}
+INCLUDE(${CMAKE_SOURCE_DIR}/cmake/InstallBasicPackageFiles.cmake)
+INSTALL_BASIC_PACKAGE_FILES(${PROJECT_NAME}
                             VERSION ${${PROJECT_NAME}_VERSION}
                             COMPATIBILITY AnyNewerVersion
                             VARS_PREFIX ${PROJECT_NAME}
                             NO_CHECK_REQUIRED_COMPONENTS_MACRO)
-include(AddUninstallTarget)
+INCLUDE(${CMAKE_SOURCE_DIR}/cmake/AddUninstallTarget.cmake)
 
-if(BUILD_TESTING)
-    add_subdirectory(test)
-endif()
+IF(BUILD_TESTING)
+    ADD_SUBDIRECTORY(test)
+ENDIF()
 
 if(BUILD_DOCS)
-    add_subdirectory(doc)
+    ADD_SUBDIRECTORY(doc)
 endif()

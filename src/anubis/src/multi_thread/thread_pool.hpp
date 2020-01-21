@@ -161,7 +161,7 @@ public:
     void add_work(std::function<void(Args...)>, Args&&...);
 
     template<typename F, typename... Args>
-    auto add_job(F&& fn, Args&&... args) -> boost::future<typename boost::result_of<F(Args...)>::type>;
+    auto add_job(F&& fn, Args&&... args) -> boost::unique_future<typename boost::result_of<F(Args...)>::type>;
 
     std::size_t count_jobs();
 

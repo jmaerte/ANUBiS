@@ -1,1 +1,0 @@
-set(INSTALL_DEPENDENCIES_DIR INSTALL CACHE STRING "Install directory for third party dependencies")

@@ -1,7 +1,7 @@
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    SET(ADR_MODEL 64)
+    SET(TARGET_BITS 64)
 else()
-    SET(ADR_MODEL 32)
+    SET(TARGET_BITS 32)
 endif()
 
-MESSAGE(STATUS "The found address model was ${ADR_MODEL}.")
+MESSAGE(STATUS "The found address model was ${TARGET_BITS}.")

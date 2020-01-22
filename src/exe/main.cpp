@@ -27,12 +27,6 @@ int main() {
 //    c->print();
     c->generate(0);
     c->generate(1);
-    c->generate(2);
-    c->generate(3);
-    c->generate(4);
-    c->generate(5);
-    c->generate(6);
-    c->generate(7);
 
     c->homology(1);
 

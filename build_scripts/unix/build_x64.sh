@@ -3,5 +3,6 @@
 
 echo Starting Build Process...
 mkdir build && cd build
-cmake ..
+cmake .. -DARCHITECTURE=64
 make
+cd ..

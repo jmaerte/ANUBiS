@@ -9,3 +9,6 @@ SET(BOOST_LIBRARIES
         atomic
         exception
         thread)
+
+SET(BOOST_LIBRARY_TAGS ${BOOST_LIBRARIES})
+LIST(TRANSFORM BOOST_LIBRARY_TAGS PREPEND "Boost::")

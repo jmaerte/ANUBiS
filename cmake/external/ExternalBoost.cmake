@@ -1,7 +1,8 @@
 ## Compile Boost dynamically (platform independent)
 set(BOOST_VERSION 1.72.0)
 
-set(BOOST_WIN32_COMPILER gcc) # using MinGW
+## gets passed by script
+#set(BOOST_WIN32_COMPILER gcc) # using MinGW
 
 #if (Boost_FOUND)
 #    set(BOOST_INCLUDE_DIR ${Boost_INCLUDE_DIRS})
@@ -10,7 +11,7 @@ set(BOOST_WIN32_COMPILER gcc) # using MinGW
 #else()
 string(REPLACE "." "_" BOOST_UNDERSCORE_VERSION ${BOOST_VERSION})
 
-set(BOOST_WIN32_COMPILER mingw)
+#set(BOOST_WIN32_COMPILER mingw)
 
 IF(WIN32)
     set(BOOST_COMPRESSION "zip")
@@ -95,17 +96,14 @@ ExternalProject_Add(		Boost
                                 --enable-pic                    # needed on windows for position independent code
 #                                variant=release                 # build variant
                                 threading=multi                 # threading
-#                                ${BOOST_LIBRARIES_ADD}          # library list to add from boost
-                                address-model=${ADR_MODEL}# Address model
-                                link=${BUILD_LIBS}              # shared or static linking
-                                runtime-link=${BUILD_LIBS}      # shared or static runtime linking
-                                ${BOOST_FLAGS}                  # platform dependent flags like fPIC
+                                ${BOOST_LIBRARIES_ADD}          # library list to add from boost
+#                                address-model=${TARGET_BITS}      # Address model
+#                                architecture=x86
+                                link=static                     # shared or static linking
+                                runtime-link=shared             # shared or static runtime linking
+#                                ${BOOST_FLAGS}                  # platform dependent flags like fPIC
         INSTALL_COMMAND 	"")
 set_property(TARGET Boost PROPERTY POSITION_INDEPENDENT_CODE TRUE)
-
-list (APPEND EXTRA_CMAKE_ARGS
-        -DBOOST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/Dependencies/Source/ep_boost
-        -DBoost_NO_SYSTEM_PATHS=ON)
 
 if( WIN32 )
     set(BOOST_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/${BOOST_INSTALL}/src/Boost)

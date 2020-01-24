@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include "../../src/multi_thread/rw_mutex.hpp"
 #include "../../src/data_types/lin/sparse.hpp"
+#include <ANUBIS_EXPORT.h>
 
 template<class T>
 class stream;
@@ -28,7 +29,7 @@ namespace jmaerte {
         @author Julian Märte
         @date January 2020
         */
-        class complex {
+        class ANUBIS_EXPORT complex {
         private:
 
             virtual stream<sparse<double>> laplacian(int i) = 0;
@@ -54,7 +55,7 @@ namespace jmaerte {
             std::vector<int> f_vector();
         };
 
-        class s_list : public complex {
+        class ANUBIS_EXPORT s_list : public complex {
         private:
 
             static const unsigned int highest_mask = (unsigned int) 1 << (8 * sizeof(unsigned int) - 1);
@@ -97,9 +98,9 @@ namespace jmaerte {
             static s_list* from_facets(std::vector<std::vector<unsigned int>*> &facets, std::string name, int sceleton = -1);
         };
 
-        class s_tree : public complex {
+        class ANUBIS_EXPORT s_tree : public complex {
         private:
-            struct node {
+                struct ANUBIS_EXPORT node {
             private:
 
                 template<typename InputIt>

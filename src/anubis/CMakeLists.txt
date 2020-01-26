@@ -19,14 +19,17 @@ set(${LIBRARY_TARGET_NAME}_PRIVATE_HDR
 		src/calc/computation.hpp
 		src/calc/utils.hpp)
 
-
 add_library(${LIBRARY_TARGET_NAME} SHARED ${${LIBRARY_TARGET_NAME}_SRC} ${${LIBRARY_TARGET_NAME}_PUBLIC_HDR} ${${LIBRARY_TARGET_NAME}_PRIVATE_HDR})
+
+if (ARCHITECTURE STREQUAL "32")
+	set_target_properties(${LIBRARY_TARGET_NAME} PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
+endif()
 
 ## set exports
 SET(generated_headers "${CMAKE_CURRENT_BINARY_DIR}/auto")
 SET(ANUBIS_EXPORT "${generated_headers}/ANUBIS_EXPORT.h")
 include(GenerateExportHeader)
-generate_export_header(ANUBiS EXPORT_FILE_NAME ${ANUBIS_EXPORT})
+generate_export_header(${LIBRARY_TARGET_NAME} EXPORT_FILE_NAME ${ANUBIS_EXPORT})
 
 add_library(${PROJECT_NAME}::${LIBRARY_TARGET_NAME} ALIAS ${LIBRARY_TARGET_NAME})
 
@@ -36,6 +39,7 @@ set_target_properties(${LIBRARY_TARGET_NAME} PROPERTIES VERSION       ${${PROJEC
 target_include_directories(${LIBRARY_TARGET_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
 														 "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>"
 														 "$<BUILD_INTERFACE:${generated_headers}>")
+target_include_directories(${LIBRARY_TARGET_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>")
 
 target_link_libraries (${LIBRARY_TARGET_NAME} ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 

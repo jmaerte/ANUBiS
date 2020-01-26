@@ -3,7 +3,7 @@
 //
 
 #include "sparse.hpp"
-#include "../../calc/utils.hpp"
+#include "calc/utils.hpp"
 
 
 template<typename T>

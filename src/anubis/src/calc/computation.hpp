@@ -10,8 +10,8 @@
 #include <cmath>
 #include <cassert>
 #include <map>
-#include "../src/data_types/lazy/stream.hpp"
-#include "../src/data_types/lin/sparse.hpp"
+#include "data_types/lazy/stream.hpp"
+#include "data_types/lin/sparse.hpp"
 #include "utils.hpp"
 
 double machine_eps = 1e-8;
@@ -178,7 +178,78 @@ void add (sparse<int>& a, int lambda, sparse<int>& b) {
     a.set(res);
 }
 
-std::map<int, unsigned int> smith(stream<sparse<int>>&& matrix) {
+/***********************************************************************************************************************
+ * Smith normalform
+ **********************************************************************************************************************/
+
+typedef unsigned long long ULL;
+typedef ULL** sparse_vector;
+
+static const int ULL_SIZE = 8 * sizeof(ULL);
+static const ULL L_MASK = (1u << (UINT_SIZE / 2)) - 1;
+static const ULL H_MASK = L_MASK << (UINT_SIZE / 2);
+
+static ULL HIGH(const ULL& a) {
+    return a >> (ULL_SIZE/2);
+}
+
+static ULL LOW(const ULL& a) {
+    return a & L_MASK;
+}
+
+static void KMUL() {
+
+}
+
+/** Adds lambda * b to a.
+ *
+ * @param a destination sparse_vector
+ * @param lambda coefficient
+ * @param size_lambda number of ULLs needed to represent lambda
+ * @param b addend
+ */
+static void ADD(sparse_vector& a, const ULL* lambda, const std::size_t& size_lambda, const sparse_vector& b) {
+    ULL a_size = *(*a);
+    std::size_t a_size = (unsigned int) (a_size >> 32);
+    std::size_t a_occupation = (unsigned int) a_size;
+
+    ULL b_size = *(*b);
+    std::size_t b_size = (unsigned int) (b_size >> 32);
+    std::size_t b_occupation = (unsigned int) b_size;
+
+    ULL ** i = a + 1;
+    ULL ** j = b + 1;
+
+    for (; i < a_occupation && j < b_occupation;) {
+        if (*i < *j) {
+            i++;
+        } else if (*i > *j) {
+            // copy the position of j into a.
+            std::size_t offset = *(j + 1) - *j;
+            if (a_occupation + offset > size) {
+
+            }
+
+            i++;
+            j++;
+        } else {
+
+        }
+    }
+}
+
+std::map<int, unsigned int> smith(stream<sparse_vector>&& stream) {
+    sparse_vector[] matrix; // array of pointers to sparse vector positions
+    std::map<sparse_vector, unsigned int> result;
+    while(!stream.is_empty()) {
+        sparse_vector vec = stream.get();
+        
+    }
+
+
+
+
+
     std::vector<sparse<int>> remainder;
     std::map<int, unsigned int> result;
     {

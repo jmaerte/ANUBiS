@@ -79,6 +79,7 @@ ExternalProject_Add(
                                 cxxflags=-fPIC
                                 cflags=-fPIC
                                 linkflags=-fPIC
+                                address-model=${ARCHITECTURE}
                                 ${BOOST_LIBRARIES_ADD}              # this declares the used libraries on windows
         INSTALL_COMMAND 	    "")
 

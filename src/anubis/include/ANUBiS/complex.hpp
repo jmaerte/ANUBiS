@@ -11,8 +11,8 @@
 #include <iostream>
 #include <iterator>
 #include <unordered_map>
-#include "../../src/multi_thread/rw_mutex.hpp"
-#include "../../src/data_types/lin/sparse.hpp"
+#include "multi_thread/rw_mutex.hpp"
+#include "data_types/lin/sparse.hpp"
 #include <ANUBIS_EXPORT.h>
 
 template<class T>

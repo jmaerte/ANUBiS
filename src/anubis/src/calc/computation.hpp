@@ -183,21 +183,84 @@ void add (sparse<int>& a, int lambda, sparse<int>& b) {
  **********************************************************************************************************************/
 
 typedef unsigned long long ULL;
-typedef ULL** sparse_vector;
+
+static const ULL THRSH_KARATSUBA = 50;
+static const ULL THRSH_TOOM_CROOK = 75;
+
+/**
+ * This union has 64 bit.
+ * In svec we have one leading ULL for metadata:
+ *      +--32--+--32--+
+ *      | size |  occ |
+ *      +------+------+
+ * After that we have a pair of
+ */
+union svec_node {
+    ULL meta;
+    ULL * value;
+};
+
+// A number is a pair of svec_nodes. One is a meta node and the other points to the actual number.
+typedef svec_node* num;
+
+// A s_vec is an array of svec_nodes. It is always of odd length; one is a meta node and all the others are pairs, i.e. nums.
+typedef svec_node* s_vec;
 
 static const int ULL_SIZE = 8 * sizeof(ULL);
+// first 32 bits
 static const ULL L_MASK = (1u << (UINT_SIZE / 2)) - 1;
+// first 16 bits
+static const ULL LL_MASK = (1u << (UINT_SIZE / 4)) - 1;
+// last 32 bits
 static const ULL H_MASK = L_MASK << (UINT_SIZE / 2);
+static const ULL NUM_SIGN_MASK = 1u << 64;
+// last 32 bits without the most significant
+static const ULL NUM_POS_MASK = H_MASK ^ S_MASK;
+static const ULL NUM_OCC_MASK = LL_MASK;
 
 static ULL HIGH(const ULL& a) {
-    return a >> (ULL_SIZE/2);
+    return a >> (ULL_SIZE / 2);
 }
 
 static ULL LOW(const ULL& a) {
     return a & L_MASK;
 }
 
-static void KMUL() {
+static inline void MUL(num& result, const num& lambda, const num& b) {
+    // set result to lambda * b
+    ULL lambda_length = lambda->meta & NUM_OCC_MASK >> 32;
+    ULL b_length = b->meta & NUM_OCC_MASK >> 32;
+    if (lambda_length < THRSH_KARATSUBA || b_length < THRSH_KARATSUBA) {
+        // perform standard multiplication
+        bool lambda_sign = (bool) (lambda->meta & NUM_SIGN_MASK);
+        bool b_sign = (bool) (b->meta & NUM_SIGN_MASK);
+        result = new svec_node {.meta = 0};
+        
+    } else {
+        if (lambda_length < THRSH_TOOM_CROOK && b_length < THRSH_TOOM_CROOK) {
+            KMUL(result, lambda, b);
+        } else {
+            TCMUL(result, lambda, b);
+        }
+    }
+}
+
+static inline bool ADD_NUM(num& a, const num& lambda, const num& b) {
+    ULL a_meta = a->meta;
+    ULL a_size = (a_meta & L_MASK) >> 16;
+    ULL a_occupation = (a_meta & LL_MASK);
+    ULL* a_start = (a + 1)->value;
+    ULL* a_end = a_start + a_occupation;
+    bool a_negative = (bool) (a_meta & NUM_SIGN_MASK);
+
+    ULL b_meta = b->meta;
+    ULL b_size = (b_meta & L_MASK) >> 16;
+    ULL b_occupation = (b_meta & LL_MASK);
+    ULL* b_start = (b + 1)->value;
+    ULL* b_end = b_start + b_occupation;
+    bool b_negative = (bool) (b_meta & NUM_SIGN_MASK);
+
+    // return if a is zero now.
 
 }
 
@@ -208,34 +271,60 @@ static void KMUL() {
  * @param size_lambda number of ULLs needed to represent lambda
  * @param b addend
  */
-static void ADD(sparse_vector& a, const ULL* lambda, const std::size_t& size_lambda, const sparse_vector& b) {
-    ULL a_size = *(*a);
-    std::size_t a_size = (unsigned int) (a_size >> 32);
-    std::size_t a_occupation = (unsigned int) a_size;
+static void ADD(s_vec& a, const num& lambda, const s_vec& b) {
+    ULL a_meta = a->meta;
+    ULL a_size = (a_meta >> 32) - 1u;
+    ULL a_occupation = a_meta & L_MASK;
+    svec_node* a_start = (a + 1);
+    svec_node* a_end = a_start + a_occupation;
 
-    ULL b_size = *(*b);
-    std::size_t b_size = (unsigned int) (b_size >> 32);
-    std::size_t b_occupation = (unsigned int) b_size;
+    ULL b_meta = b->meta;
+    ULL b_size = (b_meta >> 32) - 1u;
+    ULL b_occupation = b_meta & L_MASK;
+    svec_node* b_start = (b + 1);
+    svec_node* b_end = b_start + b_occupation;
 
-    ULL ** i = a + 1;
-    ULL ** j = b + 1;
+    svec_node* i = a_start;
+    svec_node* j = b_start;
 
-    for (; i < a_occupation && j < b_occupation;) {
-        if (*i < *j) {
-            i++;
-        } else if (*i > *j) {
-            // copy the position of j into a.
-            std::size_t offset = *(j + 1) - *j;
-            if (a_occupation + offset > size) {
-
+    ULL a_pos, b_pos;
+    for (; i != a_end && j != b_end; ) {
+        if ((a_pos = i->meta & NUM_POS_MASK) < (b_pos = j->meta & NUM_POS_MASK)) {
+            i += 2;
+        } else if (a_pos > b_pos) {
+            if (a_occupation + 2 > a_size) {
+                s_vec* next = new svec_node[a_size * 2 + 1];
+                std::copy(a, a_end, next);
+                a = next;
+                a_size *= 2;
             }
-
-            i++;
-            j++;
+            // copy j and j + 1 into a.
+            std::copy_backward(i, a_end, a_end + 2);
+            // new number = lambda * (*j)
+            KMUL(i, lambda, j);
+            a_end += 2;
+            a_occupation += 2;
+            i += 2;
+            j += 2;
         } else {
-
+            if(ADD_NUM(i, lambda, j)) {
+                std::copy(i + 2, a_end, i);
+                a_end -= 2;
+            } else i++;
+            j++;
         }
     }
+
+    if (j != b_end) {
+        if (a_occupation + b_end - j > a_size) {
+            s_vec* next = new svec_node[a_size * 2 + 1];
+            std::copy(a, a_end, next);
+            a = next;
+            a_size *= 2;
+        }
+        std::copy(j, b_end, a_end);
+    }
+    a->meta = (a_size << 32) | a_occupation;
 }
 
 std::map<int, unsigned int> smith(stream<sparse_vector>&& stream) {

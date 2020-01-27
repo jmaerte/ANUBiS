@@ -235,7 +235,7 @@ static inline void MUL(num& result, const num& lambda, const num& b) {
         bool lambda_sign = (bool) (lambda->meta & NUM_SIGN_MASK);
         bool b_sign = (bool) (b->meta & NUM_SIGN_MASK);
         result = new svec_node {.meta = 0};
-        
+
     } else {
         if (lambda_length < THRSH_TOOM_CROOK && b_length < THRSH_TOOM_CROOK) {
             KMUL(result, lambda, b);

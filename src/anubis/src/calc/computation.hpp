@@ -208,11 +208,11 @@ typedef svec_node* s_vec;
 
 static const int ULL_SIZE = 8 * sizeof(ULL);
 // first 32 bits
-static const ULL L_MASK = (1u << (UINT_SIZE / 2)) - 1;
+static const ULL L_MASK = (1u << (ULL_SIZE / 2)) - 1;
 // first 16 bits
-static const ULL LL_MASK = (1u << (UINT_SIZE / 4)) - 1;
+static const ULL LL_MASK = (1u << (ULL_SIZE / 4)) - 1;
 // last 32 bits
-static const ULL H_MASK = L_MASK << (UINT_SIZE / 2);
+static const ULL H_MASK = L_MASK << (ULL_SIZE / 2);
 static const ULL NUM_SIGN_MASK = 1u << 64;
 // last 32 bits without the most significant
 static const ULL NUM_POS_MASK = H_MASK ^ S_MASK;
@@ -226,6 +226,14 @@ static ULL LOW(const ULL& a) {
     return a & L_MASK;
 }
 
+static inline void KMUL(num& result, const num& lambda, const num& b) {
+
+}
+
+static inline void TCMUL(num& result, const num& lambda, const num& b) {
+
+}
+
 static inline void MUL(num& result, const num& lambda, const num& b) {
     // set result to lambda * b
     ULL lambda_length = lambda->meta & NUM_OCC_MASK >> 32;
@@ -234,8 +242,20 @@ static inline void MUL(num& result, const num& lambda, const num& b) {
         // perform standard multiplication
         bool lambda_sign = (bool) (lambda->meta & NUM_SIGN_MASK);
         bool b_sign = (bool) (b->meta & NUM_SIGN_MASK);
-        result = new svec_node {.meta = 0};
+        result = new svec_node {0};
+        if (lambda_sign != b_sign) {
+            result->meta |= (1ULL << 64);
+        }
+        result->meta |= (b->meta & NUM_POS_MASK);
 
+        ULL[] prod = new ULL[(lambda_length + b_length) / 2 + 1];
+        ULL* j = (b + 1)->value;
+        ULL* l = (lambda + 1)->value;
+        ULL* k = prod;
+        ULL carry = 0ULL;
+        for (; ; ) {
+            carry = 
+        }
     } else {
         if (lambda_length < THRSH_TOOM_CROOK && b_length < THRSH_TOOM_CROOK) {
             KMUL(result, lambda, b);
@@ -273,13 +293,13 @@ static inline bool ADD_NUM(num& a, const num& lambda, const num& b) {
  */
 static void ADD(s_vec& a, const num& lambda, const s_vec& b) {
     ULL a_meta = a->meta;
-    ULL a_size = (a_meta >> 32) - 1u;
+    ULL a_size = (a_meta >> 32) - 1ULL;
     ULL a_occupation = a_meta & L_MASK;
     svec_node* a_start = (a + 1);
     svec_node* a_end = a_start + a_occupation;
 
     ULL b_meta = b->meta;
-    ULL b_size = (b_meta >> 32) - 1u;
+    ULL b_size = (b_meta >> 32) - 1ULL;
     ULL b_occupation = b_meta & L_MASK;
     svec_node* b_start = (b + 1);
     svec_node* b_end = b_start + b_occupation;
@@ -310,8 +330,8 @@ static void ADD(s_vec& a, const num& lambda, const s_vec& b) {
             if(ADD_NUM(i, lambda, j)) {
                 std::copy(i + 2, a_end, i);
                 a_end -= 2;
-            } else i++;
-            j++;
+            } else i += 2;
+            j += 2;
         }
     }
 

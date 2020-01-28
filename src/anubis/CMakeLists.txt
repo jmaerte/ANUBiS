@@ -17,7 +17,8 @@ set(${LIBRARY_TARGET_NAME}_PRIVATE_HDR
 		src/multi_thread/thread_pool.hpp
 		src/multi_thread/rw_mutex.hpp
 		src/calc/computation.hpp
-		src/calc/utils.hpp)
+		src/calc/utils.hpp
+		src/calc/arithmetic.hpp)
 
 add_library(${LIBRARY_TARGET_NAME} SHARED ${${LIBRARY_TARGET_NAME}_SRC} ${${LIBRARY_TARGET_NAME}_PUBLIC_HDR} ${${LIBRARY_TARGET_NAME}_PRIVATE_HDR})
 

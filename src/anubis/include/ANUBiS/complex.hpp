@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include "multi_thread/rw_mutex.hpp"
 #include "data_types/lin/sparse.hpp"
+#include "calc/arithmetic.hpp"
 #include <ANUBIS_EXPORT.h>
 
 template<class T>
@@ -71,7 +72,7 @@ namespace jmaerte {
             std::pair<int, int> bit_position(int pos);
             int get_simplex_size();
 
-            stream<sparse<int>> boundary(int dim) override;
+            stream<s_vec> boundary(int dim) override;
 
             s_list(std::string name, int sceleton): complex(name, sceleton) {}
 
@@ -125,7 +126,7 @@ namespace jmaerte {
                 return n;
             }
 
-            stream<sparse<int>> boundary(int dim) override;
+            stream<s_vec> boundary(int dim) override;
 
             s_tree(std::string name, int sceleton = -1);
 

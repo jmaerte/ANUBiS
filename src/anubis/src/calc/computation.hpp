@@ -13,6 +13,7 @@
 #include "data_types/lazy/stream.hpp"
 #include "data_types/lin/sparse.hpp"
 #include "utils.hpp"
+#include "arithmetic.hpp"
 
 double machine_eps = 1e-8;
 
@@ -181,8 +182,7 @@ void add (sparse<int>& a, int lambda, sparse<int>& b) {
 /***********************************************************************************************************************
  * Smith normalform
  **********************************************************************************************************************/
-
-std::map<int, unsigned int> smith(stream<sparse_vector>&& stream) {
+std::map<int, unsigned int> smith(stream<s_vec>&& stream) {
     sparse_vector[] matrix; // array of pointers to sparse vector positions
     std::map<sparse_vector, unsigned int> result;
     while(!stream.is_empty()) {

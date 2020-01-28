@@ -342,7 +342,7 @@ namespace jmaerte {
             clear_map();
         }
 
-        stream<sparse<int>> s_list::boundary(int dim) {
+        stream<s_vec> s_list::boundary(int dim) {
             assert(0 <= dim && dim < f.size());
             if(f[dim] == 0) generate(dim);
             if (dim > 0) {

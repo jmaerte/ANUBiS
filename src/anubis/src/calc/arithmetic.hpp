@@ -49,18 +49,19 @@ static ULL LOW(const ULL& a) {
     return a & L_MASK;
 }
 
-static void STRIP(ULL* a, ULL& occ, bool offset) {
-    for (num i = a + occ - 1; i != a; i--) {
-        if (*i & H_MASK != 0) {
+static void STRIP(ULL const* a, ULL& occ) {
+    if (occ % 2 != 0) occ++;
+    for (ULL const* i = a + occ / 2 - 1; i != a; i--) {
+        if ((*i & H_MASK) != 0) {
             return;
         }
         occ--;
-        if (*i & L_MASK != 0) {
+        if ((*i & L_MASK) != 0) {
             return;
         }
         occ--;
     }
-    return 0;
+    occ = 0;
 }
 
 /**
@@ -71,27 +72,26 @@ static void STRIP(ULL* a, ULL& occ, bool offset) {
  * @param a_occ range of occupation of a, i.e. how many digits does a have in base 2^64
  * @param b_occ range of occupation of b, i.e. how many digits does b have in base 2^64
  */
-static void KMUL_REC(ULL* result, bool offset, const ULL* a, const ULL* b, ULL a_occ, bool a_off, ULL b_occ, bool b_off) {
-    STRIP(a, a_occ, a_off);
-    STRIP(b, b_occ, b_off);
+static void KMUL(ULL* result, bool offset, ULL const* a, ULL const* b, ULL a_occ, bool a_off, ULL b_occ, bool b_off) {
+    STRIP(a, a_occ);
+    STRIP(b, b_occ);
     if (a_occ == 0 || b_occ == 0) return;
     if (a_occ < b_occ) {
-        ULL* temp = b;
-        ULL temp_occ = b_occ;
-        b = a;
-        b_occ = a_occ;
-        a = temp;
-        a_occ = temp_occ;
+        std::swap(a, b);
+        std::swap(a_occ, b_occ);
     }
-    ULL n = a_occ - a_occ % 2;
-    ULL split = n / 2;
     if (a_occ > 1) {
-        KMUL_REC(result, offset, a, b, n, n);
-        // on offset: if we are offsetted and cut at an odd position we want to remove the offset. Its basically XOR
-        KMUL_REC(result + split, (n % 2 != 0) != offset, a + split, b, a_occ - n, b_occ);
+        ULL n = a_occ + a_occ % 2;
+        ULL split = n / 2;
+        bool a_mid_off = (n % 2 != 0) != a_off;
+        bool b_mid_off = (n % 2 != 0) != b_off;
+        bool mid_off = a_off != b_off;
+        if (offset) mid_off = !mid_off;
+        KMUL(result, offset, a, b, n, a_off, n, b_off);
+        KMUL(result + split, mid_off, a + split, b, a_occ - n, a_mid_off, b_occ, b_off);
         if (b_occ > n) {
-            KMUL_REC(result + split, (n % 2 != 0) != offset, a + split, b + split, a_occ - n, b_occ - n);
-            KMUL_REC(result + n, false, a + n, b + n, a_occ - n, b_occ - n);
+            KMUL(result + split, mid_off, a, b + split, a_occ, a_off, b_occ - n, b_off);
+            KMUL(result + n, offset, a + split, b + split, a_occ - n, a_mid_off, b_occ - n, b_mid_off);
         }
     } else {
         ULL prod = (a_off ? (*a >> 32) : (*a & L_MASK)) * (b_off ? (*b >> 32) : (*b & L_MASK));
@@ -104,10 +104,6 @@ static void KMUL_REC(ULL* result, bool offset, const ULL* a, const ULL* b, ULL a
             *result += prod;
         }
     }
-}
-
-static void KMUL(num& result, const num& a, const num& b) {
-
 }
 
 static void TCMUL(num& result, const num& a, const num& b) {
@@ -137,16 +133,18 @@ static void MUL(num& result, const num& lambda, const num& b) {
         ULL* l = (lambda + 1)->value;
         ULL* k = prod;
         ULL carry = 0ULL;
-        for (; ; ) {
-            carry =
-        }
+//        for (; ; ) {
+//            carry =
+//        }
     } else {
         if (lambda_length < THRSH_TOOM_CROOK && b_length < THRSH_TOOM_CROOK) {
-            KMUL(result, lambda, b);
+            KMUL((result + 1)->value, false, (lambda + 1)->value, (b + 1)->value, lambda_length, false, b_length, false);
         } else {
             TCMUL(result, lambda, b);
         }
     }
+    ULL occ = lambda_length + b_length;
+    STRIP((result + 1)->value, occ);
 }
 
 static bool ADD_NUM(num& a, const num& lambda, const num& b) {

@@ -66,7 +66,7 @@ static void STRIP(ULL const* a, ULL& occ) {
 
 /**
  *
- * @param result result memory block
+ * @param result result memory block. But care; we are assuming that result reserves enough space to save the product!
  * @param a
  * @param b
  * @param a_occ range of occupation of a, i.e. how many digits does a have in base 2^64
@@ -87,11 +87,22 @@ static void KMUL(ULL* result, bool offset, ULL const* a, ULL const* b, ULL a_occ
         bool b_mid_off = (n % 2 != 0) != b_off;
         bool mid_off = a_off != b_off;
         if (offset) mid_off = !mid_off;
-        KMUL(result, offset, a, b, n, a_off, n, b_off);
+        KMUL(result, offset, a, b, 2 * split, a_off, b_occ < 2 * split ? b_occ : 2 * split, b_off);
         KMUL(result + split, mid_off, a + split, b, a_occ - n, a_mid_off, b_occ, b_off);
         if (b_occ > n) {
-            KMUL(result + split, mid_off, a, b + split, a_occ, a_off, b_occ - n, b_off);
             KMUL(result + n, offset, a + split, b + split, a_occ - n, a_mid_off, b_occ - n, b_mid_off);
+            ULL* mid_term_a = new ULL[split + 1];
+            ULL* mid_term_b = new ULL[split + 1];
+            num mid_num_a = new svec_node[2] {
+                    {.meta = (split + 1) << 32},
+                    {.value = mid_term_a}
+            };
+            num mid_num_b = new svec_node[2];
+            ADD_NUM(mid_term_a, a, n, a_off);
+            ADD_NUM(mid_term_a, a + split, 2 * split);
+
+            KMUL(result + split, mid_off, a, b + split, a_occ, a_off, b_occ - n, b_off);
+            delete[] mid_term;
         }
     } else {
         ULL prod = (a_off ? (*a >> 32) : (*a & L_MASK)) * (b_off ? (*b >> 32) : (*b & L_MASK));
@@ -147,22 +158,7 @@ static void MUL(num& result, const num& lambda, const num& b) {
     STRIP((result + 1)->value, occ);
 }
 
-static bool ADD_NUM(num& a, const num& lambda, const num& b) {
-    ULL a_meta = a->meta;
-    ULL a_size = (a_meta & L_MASK) >> 16;
-    ULL a_occupation = (a_meta & LL_MASK);
-    ULL* a_start = (a + 1)->value;
-    ULL* a_end = a_start + a_occupation;
-    bool a_negative = (bool) (a_meta & NUM_SIGN_MASK);
-
-    ULL b_meta = b->meta;
-    ULL b_size = (b_meta & L_MASK) >> 16;
-    ULL b_occupation = (b_meta & LL_MASK);
-    ULL* b_start = (b + 1)->value;
-    ULL* b_end = b_start + b_occupation;
-    bool b_negative = (bool) (b_meta & NUM_SIGN_MASK);
-
-    // return if a is zero now.
+static bool ADD_NUM(ULL* a, ULL const* b, ULL b_occ, bool offset) {
 
 }
 
@@ -181,10 +177,13 @@ static void ADD(s_vec& a, const num& lambda, const s_vec& b) {
     svec_node* a_end = a_start + a_occupation;
 
     ULL b_meta = b->meta;
-    ULL b_size = (b_meta >> 32) - 1ULL;
+//    ULL b_size = (b_meta >> 32) - 1ULL;
     ULL b_occupation = b_meta & L_MASK;
     svec_node* b_start = (b + 1);
     svec_node* b_end = b_start + b_occupation;
+
+    ULL lambda_meta = lambda->meta;
+    ULL lambda_occupation = lambda_meta & L_MASK;
 
     svec_node* i = a_start;
     svec_node* j = b_start;
@@ -203,13 +202,22 @@ static void ADD(s_vec& a, const num& lambda, const s_vec& b) {
             // copy j and j + 1 into a.
             std::copy_backward(i, a_end, a_end + 2);
             // new number = lambda * (*j)
-            KMUL(i, lambda, j);
+            *i = {.meta = (lambda_occupation + (j->meta & NUM_OCC_MASK)) << 32};
+            *(i + 1) = {.value = new ULL[lambda_occupation + (j->meta & NUM_OCC_MASK)]}
+            KMUL((i + 1)->value, lambda, j);
             a_end += 2;
             a_occupation += 2;
             i += 2;
             j += 2;
         } else {
-            if(ADD_NUM(i, lambda, j)) {
+            ULL meta = 0;
+            ULL* address = new ULL[lambda_occupation + b_occupation];
+            meta |= lambda_occupation + b_occupation;
+            num prod = new svec_node[2] {
+                    {.meta = meta},
+                    {.value = address}
+            };
+            if(ADD_NUM(i, prod)) {
                 std::copy(i + 2, a_end, i);
                 a_end -= 2;
             } else i += 2;

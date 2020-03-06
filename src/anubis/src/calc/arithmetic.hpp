@@ -41,17 +41,23 @@ static const ULL NUM_SIGN_MASK = 1ULL << 63;
 static const ULL NUM_POS_MASK = H_MASK ^ NUM_SIGN_MASK;
 static const ULL NUM_OCC_MASK = LL_MASK;
 
-static ULL HIGH(const ULL& a) {
-    return a >> (ULL_SIZE / 2);
-}
-
-static ULL LOW(const ULL& a) {
-    return a & L_MASK;
-}
-
-static void STRIP(ULL const* a, ULL& occ) {
-    if (occ % 2 != 0) occ++;
-    for (ULL const* i = a + occ / 2 - 1; i != a; i--) {
+static void STRIP(ULL const* a, int offset, ULL& occ) {
+    if (offset) {
+        if (occ == 1 && (*a & H_MASK) != 0) {
+            return;
+        }
+        a++;
+        occ--;
+    }
+    ULL const* i = a + occ / 2 - (occ % 2 == 0 ? 1 : 0);
+    if (occ % 2 != 0) {
+        if ((*i & L_MASK) != 0) {
+            if (offset) occ++;
+            return;
+        }
+        occ--;
+    }
+    for (; i != a; i--) {
         if ((*i & H_MASK) != 0) {
             return;
         }
@@ -60,6 +66,13 @@ static void STRIP(ULL const* a, ULL& occ) {
             return;
         }
         occ--;
+    }
+    if (offset) {
+        a--;
+        occ++;
+        if ((*a & H_MASK) != 0) {
+            return;
+        }
     }
     occ = 0;
 }
@@ -72,9 +85,9 @@ static void STRIP(ULL const* a, ULL& occ) {
  * @param a_occ range of occupation of a, i.e. how many digits does a have in base 2^64
  * @param b_occ range of occupation of b, i.e. how many digits does b have in base 2^64
  */
-static void KMUL(ULL* result, bool offset, ULL const* a, ULL const* b, ULL a_occ, bool a_off, ULL b_occ, bool b_off) {
-    STRIP(a, a_occ);
-    STRIP(b, b_occ);
+static void KMUL(ULL* result, bool offset, ULL const* a, ULL a_occ, bool a_off, ULL const* b, ULL b_occ, bool b_off) {
+    STRIP(a, a_off, a_occ);
+    STRIP(b, b_off, b_occ);
     if (a_occ == 0 || b_occ == 0) return;
     if (a_occ < b_occ) {
         std::swap(a, b);
@@ -89,27 +102,23 @@ static void KMUL(ULL* result, bool offset, ULL const* a, ULL const* b, ULL a_occ
         bool b_mid_off = (n % 2 != 0) != b_off;
         bool mid_off = a_off != b_off;
         if (offset) mid_off = !mid_off;
-        KMUL(result, offset, a, b, n, a_off, b_occ < n ? b_occ : n, b_off);
-        KMUL(result + split, mid_off, a + split, b, a_occ - n, a_mid_off, b_occ, b_off);
+        KMUL(result, offset, a, n, a_off, b, b_occ < n ? b_occ : n, b_off);
+        KMUL(result + split, mid_off, a + split, a_occ - n, a_mid_off, b, b_occ, b_off);
         if (b_occ > n) {
-            KMUL(result + n, offset, a + split, b + split, a_occ - n, a_mid_off, b_occ - n, b_mid_off);
-            KMUL(result + split, mid_off, a, b + split, a_occ, a_off, b_occ - n, b_mid_off);
+            KMUL(result + n, offset, a + split, a_occ - n, a_mid_off, b + split, b_occ - n, b_mid_off);
+            KMUL(result + split, mid_off, a, a_occ, a_off, b + split, b_occ - n, b_mid_off);
         }
     } else {
         ULL prod = (a_off ? (*a >> 32) : (*a & L_MASK)) * (b_off ? (*b >> 32) : (*b & L_MASK));
         if (offset) {
             if (prod & H_MASK) {
-                *(result + 1)+= prod >> 32;
+                *(result + 1) += prod >> 32;
             }
             *result += prod << 32;
         } else {
             *result += prod;
         }
     }
-}
-
-static void TCMUL(num& result, const num& a, const num& b) {
-
 }
 
 static void MUL(num& result, const num& lambda, const num& b) {
@@ -139,18 +148,14 @@ static void MUL(num& result, const num& lambda, const num& b) {
 //            carry =
 //        }
     } else {
-        if (lambda_length < THRSH_TOOM_CROOK && b_length < THRSH_TOOM_CROOK) {
-            KMUL((result + 1)->value, false, (lambda + 1)->value, (b + 1)->value, lambda_length, false, b_length, false);
-        } else {
-            TCMUL(result, lambda, b);
-        }
+        KMUL((result + 1)->value, false, (lambda + 1)->value, lambda_length, false, (b + 1)->value, b_length, false);
     }
     ULL occ = lambda_length + b_length;
-    STRIP((result + 1)->value, occ);
+    STRIP((result + 1)->value, false, occ);
 }
 
-static bool ADD_NUM(ULL* a, ULL const* b, ULL b_occ, bool offset) {
-
+static bool ADD_NUM(num a, num b) {
+    return true;
 }
 
 /** Adds lambda * b to a.
@@ -162,7 +167,7 @@ static bool ADD_NUM(ULL* a, ULL const* b, ULL b_occ, bool offset) {
  */
 static void ADD(s_vec& a, const num& lambda, const s_vec& b) {
     ULL a_meta = a->meta;
-    ULL a_size = (a_meta >> 32) - 1ULL;
+    ULL a_size = (a_meta >> 32);// - 1ULL; ?
     ULL a_occupation = a_meta & L_MASK;
     svec_node* a_start = (a + 1);
     svec_node* a_end = a_start + a_occupation;
@@ -185,7 +190,7 @@ static void ADD(s_vec& a, const num& lambda, const s_vec& b) {
             i += 2;
         } else if (a_pos > b_pos) {
             if (a_occupation + 2 > a_size) {
-                s_vec* next = new svec_node[a_size * 2 + 1];
+                s_vec next = new svec_node[a_size * 2 + 1];
                 std::copy(a, a_end, next);
                 a = next;
                 a_size *= 2;
@@ -194,8 +199,8 @@ static void ADD(s_vec& a, const num& lambda, const s_vec& b) {
             std::copy_backward(i, a_end, a_end + 2);
             // new number = lambda * (*j)
             *i = {.meta = (lambda_occupation + (j->meta & NUM_OCC_MASK)) << 32};
-            *(i + 1) = {.value = new ULL[lambda_occupation + (j->meta & NUM_OCC_MASK)]}
-            KMUL((i + 1)->value, lambda, j);
+            *(i + 1) = {.value = new ULL[lambda_occupation + (j->meta & NUM_OCC_MASK)]};
+            MUL(i, lambda, j);
             a_end += 2;
             a_occupation += 2;
             i += 2;
@@ -218,7 +223,7 @@ static void ADD(s_vec& a, const num& lambda, const s_vec& b) {
 
     if (j != b_end) {
         if (a_occupation + b_end - j > a_size) {
-            s_vec* next = new svec_node[a_size * 2 + 1];
+            s_vec next = new svec_node[a_size * 2 + 1];
             std::copy(a, a_end, next);
             a = next;
             a_size *= 2;

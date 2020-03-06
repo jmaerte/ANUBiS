@@ -81,28 +81,19 @@ static void KMUL(ULL* result, bool offset, ULL const* a, ULL const* b, ULL a_occ
         std::swap(a_occ, b_occ);
     }
     if (a_occ > 1) {
-        ULL n = a_occ + a_occ % 2;
+        ULL r = a_occ + a_occ % 2;
+        ULL n = r / 2;
         ULL split = n / 2;
+        if (a_occ % 2 && a_off) split++;
         bool a_mid_off = (n % 2 != 0) != a_off;
         bool b_mid_off = (n % 2 != 0) != b_off;
         bool mid_off = a_off != b_off;
         if (offset) mid_off = !mid_off;
-        KMUL(result, offset, a, b, 2 * split, a_off, b_occ < 2 * split ? b_occ : 2 * split, b_off);
+        KMUL(result, offset, a, b, n, a_off, b_occ < n ? b_occ : n, b_off);
         KMUL(result + split, mid_off, a + split, b, a_occ - n, a_mid_off, b_occ, b_off);
         if (b_occ > n) {
             KMUL(result + n, offset, a + split, b + split, a_occ - n, a_mid_off, b_occ - n, b_mid_off);
-            ULL* mid_term_a = new ULL[split + 1];
-            ULL* mid_term_b = new ULL[split + 1];
-            num mid_num_a = new svec_node[2] {
-                    {.meta = (split + 1) << 32},
-                    {.value = mid_term_a}
-            };
-            num mid_num_b = new svec_node[2];
-            ADD_NUM(mid_term_a, a, n, a_off);
-            ADD_NUM(mid_term_a, a + split, 2 * split);
-
-            KMUL(result + split, mid_off, a, b + split, a_occ, a_off, b_occ - n, b_off);
-            delete[] mid_term;
+            KMUL(result + split, mid_off, a, b + split, a_occ, a_off, b_occ - n, b_mid_off);
         }
     } else {
         ULL prod = (a_off ? (*a >> 32) : (*a & L_MASK)) * (b_off ? (*b >> 32) : (*b & L_MASK));

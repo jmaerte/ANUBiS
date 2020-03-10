@@ -183,7 +183,11 @@ void add (sparse<int>& a, int lambda, sparse<int>& b) {
  * Smith normalform
  **********************************************************************************************************************/
 std::map<int, unsigned int> smith(stream<s_vec>&& matrix) {
-//    std::cout << "hom" << std::endl;
+    return smith(matrix);
+}
+
+std::map<int, unsigned int> smith(stream<s_vec>& matrix) {
+    //    std::cout << "hom" << std::endl;
 //    ULL* a = new unsigned long long;
 //    *a = ((1ULL << 31) + (1ULL << 32));
 //    std::cout << *a << std::endl;
@@ -196,7 +200,7 @@ std::map<int, unsigned int> smith(stream<s_vec>&& matrix) {
 //    delete a;
 //    delete b;
 //    delete[] c;
-    std::vector<sparse<int>> remainder;
+    std::vector<s_vec> remainder;
     std::map<int, unsigned int> result;
     {
         std::vector<s_vec> trivial;
@@ -207,7 +211,7 @@ std::map<int, unsigned int> smith(stream<s_vec>&& matrix) {
             s_vec vec = matrix.get();
             matrix = matrix.pop_front();
             int k = 0;
-            for (int i = 0; i < s_vec->meta & L_MASK;) {
+            for (int i = 0; i < vec->meta & L_MASK;) {
                 std::cout << vec.non_zero() << std::endl;
                 k = binary_search(first, vec[1 + 2 * i] & NUM_POS_MASK >> 32, k, first.size(), compare_ints);
                 if (k < first.size() && first[k] == vec[i]) {
@@ -216,7 +220,7 @@ std::map<int, unsigned int> smith(stream<s_vec>&& matrix) {
                     if ((trivial[k] + 1)->meta & NUM_SIGN_MASK) (vec + (1 + 2 * i))->meta ^= NUM_SIGN_MASK;
                 } else i++;
             }
-            if (vec.non_zero() == 0) continue; // vector was linear combination of trivial ones.
+            if (vec->meta & L_MASK) continue; // vector was linear combination of trivial ones.
             if (vec(0) == 1 || vec(0) == -1) {
                 k = binary_search(first, vec[1 + 2 * i] & NUM_POS_MASK >> 32, 0, first.size(), compare_ints);
                 trivial.insert(trivial.begin() + k, vec);

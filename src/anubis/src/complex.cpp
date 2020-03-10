@@ -342,7 +342,7 @@ namespace jmaerte {
             clear_map();
         }
 
-        stream<sparse<int>> s_list::boundary(int dim) {
+        stream<s_vec> s_list::boundary(int dim) {
             assert(0 <= dim && dim < f.size());
             if(f[dim] == 0) generate(dim);
             if (dim > 0) {
@@ -350,9 +350,12 @@ namespace jmaerte {
             }
             int SIMPLEX_SIZE = get_simplex_size();
             return dim == 0 ? transform(ints_from(0).take(f[dim]), [this](int i) {
-                return sparse<int>({{0, 1}}); // reduced boundary
+                return NEW_VEC({
+                    {0ULL, {false, 1ULL}}
+                }); // reduced boundary
             }) : transform(ints_from(0).take(f[dim]), [this, dim, SIMPLEX_SIZE](int i) {
-                std::vector<std::pair<int, int>> vec {static_cast<std::size_t>(dim + 1)};
+                std::cout << "generating..." << std::endl;
+                std::vector<std::pair<ULL, std::pair<bool, ULL>>> vec {static_cast<std::size_t>(dim + 1)};
                 unsigned int * simplex = this->past[dim] + i * SIMPLEX_SIZE;
                 int curr_index = 0;
                 unsigned int curr = simplex[0];
@@ -366,11 +369,11 @@ namespace jmaerte {
                     simplex[curr_index] ^= leading;
                     vec[pos] = {
                             binary_search(this->past[dim - 1], simplex, f[dim - 1], SIMPLEX_SIZE),
-                            pos % 2 == 0 ? 1 : -1
+                            {pos % 2 == 0, 1ULL}
                     };
                     simplex[curr_index] = temp;
                 }
-                return sparse<int>(vec);
+                return NEW_VEC(vec);
             });
         }
 
@@ -380,23 +383,35 @@ namespace jmaerte {
 
         std::map<int, unsigned int> s_list::homology(int dim) {
             auto it_dim = smith_forms.find(dim);
-            if (it_dim == smith_forms.end()) smith_forms.emplace(dim, smith(boundary(dim)));
+            if (it_dim == smith_forms.end()) {
+                smith_forms.emplace(dim, smith(boundary(dim)));
+                it_dim = smith_forms.find(dim);
+            }
             auto d_map = it_dim->second;
-            it_dim = smith_forms.find(dim - 1);
-            if (it_dim == smith_forms.end()) smith_forms.emplace(dim - 1, smith(boundary(dim - 1)));
-            auto d_m_map = it_dim->second;
-            int rank_low = 0;
-            for (auto kv : d_m_map) {
-                rank_low += kv.second;
+            int kernel_rank = f[dim];
+            if (dim > 0) {
+
+                it_dim = smith_forms.find(dim - 1);
+                if (it_dim == smith_forms.end()) {
+                    smith_forms.emplace(dim - 1, smith(boundary(dim - 1)));
+                    it_dim = smith_forms.find(dim - 1);
+                }
+                auto d_m_map = it_dim->second;
+
+                int rank_low = 0;
+
+                for (auto kv : d_m_map) {
+                    rank_low += kv.second;
+                }
+                kernel_rank -= rank_low;
             }
-            int rank = f[dim] - rank_low;
-            std::map<int, unsigned int> result = d_map;
-            int rank_high = 0;
+            std::map<int, unsigned int> result {};
+            int rank = kernel_rank;
             for (auto kv : d_map) {
-                rank_high += kv.second;
+                if (kv.first != 1) result.emplace(kv.first, kv.second);
+                rank -= kv.second;
             }
-            if (rank - rank_high != 0) result.emplace(1, rank - rank_high);
-            return result;
+            result.emplace(0, rank);
         }
 
         /***************************************************************************************************************
@@ -494,8 +509,8 @@ namespace jmaerte {
             }, facets, name, sceleton);
         }
 
-        stream<sparse<int>> s_tree::boundary(int dim) {
-            return stream<sparse<int>>();
+        stream<s_vec> s_tree::boundary(int dim) {
+            return stream<s_vec>();
         }
 
         std::map<int, unsigned int> s_tree::homology(int i) {

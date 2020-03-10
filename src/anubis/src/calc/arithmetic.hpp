@@ -40,6 +40,7 @@ static const ULL NUM_SIGN_MASK = 1ULL << 63;
 // last 32 bits without the most significant
 static const ULL NUM_POS_MASK = H_MASK ^ NUM_SIGN_MASK;
 static const ULL NUM_OCC_MASK = LL_MASK;
+static const ULL FIFTEEN = LL_MASK & ~(1u << 15);
 
 static void STRIP(ULL const* a, int offset, ULL& occ) {
     if (offset) {
@@ -77,6 +78,44 @@ static void STRIP(ULL const* a, int offset, ULL& occ) {
     occ = 0;
 }
 
+static num NEW_NUM(ULL initial_size, bool sign, ULL value) {
+    if (initial_size % 2 != 0) initial_size++;
+    num i = new svec_node[2]{
+        {.meta = (sign ? NUM_SIGN_MASK : 0u) | ((initial_size & LL_MASK) << 16) | 1u},
+        {.value = new ULL[initial_size / 2]}
+    };
+    *((i + 1)->value) = value;
+    return i;
+}
+
+static s_vec NEW_VEC(std::vector<std::pair<ULL, std::pair<bool, ULL>>> vector) {
+    s_vec v = new svec_node[1 + 2 * vector.size()];
+    v[0] = {.meta = ((ULL) vector.size()) << 32 | ((ULL) vector.size()) & L_MASK};
+    int i = 1;
+    for (auto it = vector.begin(); it != vector.end(); it++) {
+        num n = NEW_NUM(1u, it->second.first, it->second.second);
+        n->meta |= (it->first & FIFTEEN) << 32;
+        v[i++] = *n;
+        v[i++] = *(n + 1);
+    }
+    return v;
+}
+
+static void DEL_NUM(num i) {
+    ULL size = (i->meta & ~NUM_SIGN_MASK) >> 32;
+    delete[] (i + 1)->value;
+    delete (i + 1);
+    delete i;
+}
+
+static void DEL_VEC(s_vec v) {
+    ULL occ = v->meta & L_MASK;
+    for (int i = 0; i < occ; i++) {
+        DEL_NUM(v + (1 + 2 * i));
+    }
+    delete[] v;
+}
+
 /**
  *
  * @param result result memory block. But care; we are assuming that result reserves enough space to save the product!
@@ -86,12 +125,14 @@ static void STRIP(ULL const* a, int offset, ULL& occ) {
  * @param b_occ range of occupation of b, i.e. how many digits does b have in base 2^64
  */
 static void KMUL(ULL* result, bool offset, ULL const* a, ULL a_occ, bool a_off, ULL const* b, ULL b_occ, bool b_off) {
-    STRIP(a, a_off, a_occ);
-    STRIP(b, b_off, b_occ);
+//    STRIP(a, a_off, a_occ);
+//    STRIP(b, b_off, b_occ);
+    std::cout << offset << " " << *a << " " << a_occ << " " << a_off << " " << *b << " " << b_occ << " " << b_off << std::endl;
     if (a_occ == 0 || b_occ == 0) return;
     if (a_occ < b_occ) {
         std::swap(a, b);
         std::swap(a_occ, b_occ);
+        std::swap(a_off, b_off);
     }
     if (a_occ > 1) {
         ULL r = a_occ + a_occ % 2;
@@ -100,16 +141,17 @@ static void KMUL(ULL* result, bool offset, ULL const* a, ULL a_occ, bool a_off, 
         if (a_occ % 2 && a_off) split++;
         bool a_mid_off = (n % 2 != 0) != a_off;
         bool b_mid_off = (n % 2 != 0) != b_off;
-        bool mid_off = a_off != b_off;
-        if (offset) mid_off = !mid_off;
+//        bool mid_off = a_mid_off != b_mid_off;
+//        if (offset) mid_off = !mid_off;
         KMUL(result, offset, a, n, a_off, b, b_occ < n ? b_occ : n, b_off);
-        KMUL(result + split, mid_off, a + split, a_occ - n, a_mid_off, b, b_occ, b_off);
+        KMUL(result + split, a_mid_off != b_off, a + split, a_occ - n, a_mid_off, b, b_occ, b_off);
         if (b_occ > n) {
             KMUL(result + n, offset, a + split, a_occ - n, a_mid_off, b + split, b_occ - n, b_mid_off);
-            KMUL(result + split, mid_off, a, a_occ, a_off, b + split, b_occ - n, b_mid_off);
+            KMUL(result + split, b_mid_off != a_off, a, a_occ, a_off, b + split, b_occ - n, b_mid_off);
         }
     } else {
         ULL prod = (a_off ? (*a >> 32) : (*a & L_MASK)) * (b_off ? (*b >> 32) : (*b & L_MASK));
+        std::cout << prod << std::endl;
         if (offset) {
             if (prod & H_MASK) {
                 *(result + 1) += prod >> 32;
@@ -165,72 +207,72 @@ static bool ADD_NUM(num a, num b) {
  * @param size_lambda number of ULLs needed to represent lambda
  * @param b addend
  */
-static void ADD(s_vec& a, const num& lambda, const s_vec& b) {
-    ULL a_meta = a->meta;
-    ULL a_size = (a_meta >> 32);// - 1ULL; ?
-    ULL a_occupation = a_meta & L_MASK;
-    svec_node* a_start = (a + 1);
-    svec_node* a_end = a_start + a_occupation;
-
-    ULL b_meta = b->meta;
-//    ULL b_size = (b_meta >> 32) - 1ULL;
-    ULL b_occupation = b_meta & L_MASK;
-    svec_node* b_start = (b + 1);
-    svec_node* b_end = b_start + b_occupation;
-
-    ULL lambda_meta = lambda->meta;
-    ULL lambda_occupation = lambda_meta & L_MASK;
-
-    svec_node* i = a_start;
-    svec_node* j = b_start;
-
-    ULL a_pos, b_pos;
-    for (; i != a_end && j != b_end; ) {
-        if ((a_pos = i->meta & NUM_POS_MASK) < (b_pos = j->meta & NUM_POS_MASK)) {
-            i += 2;
-        } else if (a_pos > b_pos) {
-            if (a_occupation + 2 > a_size) {
-                s_vec next = new svec_node[a_size * 2 + 1];
-                std::copy(a, a_end, next);
-                a = next;
-                a_size *= 2;
-            }
-            // copy j and j + 1 into a.
-            std::copy_backward(i, a_end, a_end + 2);
-            // new number = lambda * (*j)
-            *i = {.meta = (lambda_occupation + (j->meta & NUM_OCC_MASK)) << 32};
-            *(i + 1) = {.value = new ULL[lambda_occupation + (j->meta & NUM_OCC_MASK)]};
-            MUL(i, lambda, j);
-            a_end += 2;
-            a_occupation += 2;
-            i += 2;
-            j += 2;
-        } else {
-            ULL meta = 0;
-            ULL* address = new ULL[lambda_occupation + b_occupation];
-            meta |= lambda_occupation + b_occupation;
-            num prod = new svec_node[2] {
-                    {.meta = meta},
-                    {.value = address}
-            };
-            if(ADD_NUM(i, prod)) {
-                std::copy(i + 2, a_end, i);
-                a_end -= 2;
-            } else i += 2;
-            j += 2;
-        }
-    }
-
-    if (j != b_end) {
-        if (a_occupation + b_end - j > a_size) {
-            s_vec next = new svec_node[a_size * 2 + 1];
-            std::copy(a, a_end, next);
-            a = next;
-            a_size *= 2;
-        }
-        std::copy(j, b_end, a_end);
-    }
-    a->meta = (a_size << 32) | a_occupation;
-}
+//static void ADD(s_vec& a, const num& lambda, const s_vec& b) {
+//    ULL a_meta = a->meta;
+//    ULL a_size = (a_meta >> 32);// - 1ULL; ?
+//    ULL a_occupation = a_meta & L_MASK;
+//    svec_node* a_start = (a + 1);
+//    svec_node* a_end = a_start + a_occupation;
+//
+//    ULL b_meta = b->meta;
+////    ULL b_size = (b_meta >> 32) - 1ULL;
+//    ULL b_occupation = b_meta & L_MASK;
+//    svec_node* b_start = (b + 1);
+//    svec_node* b_end = b_start + b_occupation;
+//
+//    ULL lambda_meta = lambda->meta;
+//    ULL lambda_occupation = lambda_meta & L_MASK;
+//
+//    svec_node* i = a_start;
+//    svec_node* j = b_start;
+//
+//    ULL a_pos, b_pos;
+//    for (; i != a_end && j != b_end; ) {
+//        if ((a_pos = i->meta & NUM_POS_MASK) < (b_pos = j->meta & NUM_POS_MASK)) {
+//            i += 2;
+//        } else if (a_pos > b_pos) {
+//            if (a_occupation + 2 > a_size) {
+//                s_vec next = new svec_node[a_size * 2 + 1];
+//                std::copy(a, a_end, next);
+//                a = next;
+//                a_size *= 2;
+//            }
+//            // copy j and j + 1 into a.
+//            std::copy_backward(i, a_end, a_end + 2);
+//            // new number = lambda * (*j)
+//            *i = {.meta = (lambda_occupation + (j->meta & NUM_OCC_MASK)) << 32};
+//            *(i + 1) = {.value = new ULL[lambda_occupation + (j->meta & NUM_OCC_MASK)]};
+//            MUL(i, lambda, j);
+//            a_end += 2;
+//            a_occupation += 2;
+//            i += 2;
+//            j += 2;
+//        } else {
+//            ULL meta = 0;
+//            ULL* address = new ULL[lambda_occupation + b_occupation];
+//            meta |= lambda_occupation + b_occupation;
+//            num prod = new svec_node[2] {
+//                    {.meta = meta},
+//                    {.value = address}
+//            };
+//            if(ADD_NUM(i, prod)) {
+//                std::copy(i + 2, a_end, i);
+//                a_end -= 2;
+//            } else i += 2;
+//            j += 2;
+//        }
+//    }
+//
+//    if (j != b_end) {
+//        if (a_occupation + b_end - j > a_size) {
+//            s_vec next = new svec_node[a_size * 2 + 1];
+//            std::copy(a, a_end, next);
+//            a = next;
+//            a_size *= 2;
+//        }
+//        std::copy(j, b_end, a_end);
+//    }
+//    a->meta = (a_size << 32) | a_occupation;
+//}
 
 #endif //ANUBIS_SUPERBUILD_ARITHMETIC_HPP

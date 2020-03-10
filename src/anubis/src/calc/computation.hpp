@@ -182,132 +182,147 @@ void add (sparse<int>& a, int lambda, sparse<int>& b) {
 /***********************************************************************************************************************
  * Smith normalform
  **********************************************************************************************************************/
-std::map<int, unsigned int> smith(stream<sparse<int>>&& matrix) {
-//    std::vector<sparse<int>> remainder;
-//    std::map<num, unsigned int> result;
-//    {
-//        std::vector<sparse<int>> trivial;
-//        std::vector<int> first;
-//        int count = 0;
-//        // Preprocessing
-//        while (!matrix.is_empty()) {
-//            s_vec vec = matrix.get();
-//            matrix = matrix.pop_front();
-//            int k = 0;
-//            for (int i = 0; i < vec.non_zero();) {
-//                std::cout << vec.non_zero() << std::endl;
-//                k = binary_search(first, vec[i], k, first.size(), compare_ints);
-//                if (k < first.size() && first[k] == vec[i]) {
-//                    add(vec, - vec(i), trivial[k]);
-//                } else i++;
-//            }
-//            if (vec.non_zero() == 0) continue; // vector was linear combination of trivial ones.
-//            if (vec(0) == 1 || vec(0) == -1) {
-//                k = binary_search(first, vec[0], 0, first.size(), compare_ints);
-//                trivial.insert(trivial.begin() + k, vec);
-//                first.insert(first.begin() + k, vec[0]);
-//                for (sparse<int>& v : remainder) {
-//                    int j = v.index(vec[0]);
-//                    if (j < v.non_zero() && v(j) == vec[0]) add(v, - v(j) * vec(0), vec);
-//                }
-//            }
-//        }
-//        result = {{1, first.size()}};
-//    }
-//
-//    // Smith
-//    int n = remainder.size();
-//    for (int i = 0; i < n; i++) {
-//        if (i % 100 == 0) std::cout << "\rCalculating Smith Normalform " << i << " / " << remainder.size();
-//        int j = -1;
-//        sparse<int> temp;
-//        std::vector<int> indices;
-//        for (int row = i; row < remainder.size(); row++) {
-//            if (remainder[row].non_zero() == 0) {
-//                temp = remainder[row];
-//                remainder[row] = remainder[--n];
-//                remainder[n] = temp;
-//            } else if (remainder[row][0] < j || j < 0) {
-//                indices.clear();
-//                indices.push_back(row);
-//                j = remainder[row][0];
-//            } else if (remainder[row][0] == j) {
-//                indices.push_back(row);
-//            }
-//        }
-//        if (j < 0) break;
-//        // is true if we reduce column, false if we reduce row
-//        bool col = true;
-//        while (true) {
-//            if (col) {
-//                // Pivot
-//                int k = -1; // row index of pivot
-//                int h = 0; // index in indices where the pivot lays
-//                for (int l = 0; l < indices.size(); l++) {
-//                    int row = indices[l];
-//                    if (k < 0 || abs(remainder[k](0)) > abs(remainder[row](0))) {
-//                        k = row;
-//                        h = l;
-//                    }
-//                }
-//                if (k < 0) return result;
-//                temp = remainder[i];
-//                remainder[i] = remainder[k];
-//                remainder[k] = temp;
-//                if (indices[0] != i) indices.erase(indices.begin() + h);
-//                if (indices[0] == i) indices.erase(indices.begin());
-//                std::vector<int> next_indices;
-//                next_indices.reserve(indices.size() - 1);
-//                int occ = 0;
-//                for (int l = 0; l < indices.size(); l++) {
-//                    int row = indices[l];
-//                    int lambda = remainder[row](0) / remainder[i](0);
-//                    add(remainder[row], - lambda, remainder[i]);
-//                    if (remainder[row][0] == remainder[i][0]) next_indices[occ++] = row;
-//                }
-//                indices = next_indices;
-//                if (next_indices.size() > 0) {
-//                    if (remainder[i].non_zero() > 0) indices.push_back(i);
-//                    col = true;
-//                } else col = false;
-//            } else {
-//                for (int l = 1; l < remainder[i].non_zero(); l++) {
-//                    remainder[i].get(l) %= remainder[i](0);
-//                    if (remainder[i].get(l) == 0) {
-//                        remainder[i].remove(l);
-//                        l--;
-//                    }
-//                }
-//                if (remainder[i].non_zero() == 1) {
-//                    auto it = result.find(abs(remainder[i](0)));
-//                    if (it == result.end()) result.emplace(abs(remainder[i](0)), 1);
-//                    else (*it).second = (*it).second + 1;
-//                    break;
-//                } else {
-//                    int k = -1;
-//                    for (int row = 0; row < remainder[i].non_zero(); row++) {
-//                        if (k < 0 || abs(remainder[i](k)) > abs(remainder[i](row))) k = i;
-//                    }
-//                    int curr = remainder[i](0);
-//                    remainder[i].get(0) = remainder[i](k);
-//                    remainder[i].get(k) = curr;
-//                    for(int row = i + 1; row < n; row++) {
-//                        int l = remainder[row].index(remainder[i](k));
-//                        if (l < remainder[row].non_zero() && remainder[row][l] == remainder[row][k]) {
-//                            curr = remainder[row](l);
-//                            remainder[row].remove(l);
-//                            remainder[row].insert(0, remainder[i][0], curr);
-//                            indices.push_back(row);
-//                        }
-//                    }
-//                    if (indices.size() == 0) col = false;
-//                    else {
-//                        indices.push_back(i);
-//                        col = true;
-//                    }
-//                }
-//            }
-//        }
-//    }
-//    return result;
+std::map<int, unsigned int> smith(stream<s_vec>&& matrix) {
+//    std::cout << "hom" << std::endl;
+//    ULL* a = new unsigned long long;
+//    *a = ((1ULL << 31) + (1ULL << 32));
+//    std::cout << *a << std::endl;
+//    ULL* b = new unsigned long long;
+//    *b = (1ULL << 63) | 1ULL;
+//    ULL* c = new unsigned long long[2];
+//    *c = (0ULL);
+//    KMUL(c, false, a, 2, false, b, 2, false);
+//    std::cout << *c << " " << *(c + 1) << std::endl;
+//    delete a;
+//    delete b;
+//    delete[] c;
+    std::vector<sparse<int>> remainder;
+    std::map<int, unsigned int> result;
+    {
+        std::vector<s_vec> trivial;
+        std::vector<ULL> first;
+        int count = 0;
+        // Preprocessing
+        while (!matrix.is_empty()) {
+            s_vec vec = matrix.get();
+            matrix = matrix.pop_front();
+            int k = 0;
+            for (int i = 0; i < s_vec->meta & L_MASK;) {
+                std::cout << vec.non_zero() << std::endl;
+                k = binary_search(first, vec[1 + 2 * i] & NUM_POS_MASK >> 32, k, first.size(), compare_ints);
+                if (k < first.size() && first[k] == vec[i]) {
+                    if ((trivial[k] + 1)->meta & NUM_SIGN_MASK) (vec + (1 + 2 * i))->meta ^= NUM_SIGN_MASK;
+                    ADD(vec, vec + (1 + 2 * i), trivial[k]);
+                    if ((trivial[k] + 1)->meta & NUM_SIGN_MASK) (vec + (1 + 2 * i))->meta ^= NUM_SIGN_MASK;
+                } else i++;
+            }
+            if (vec.non_zero() == 0) continue; // vector was linear combination of trivial ones.
+            if (vec(0) == 1 || vec(0) == -1) {
+                k = binary_search(first, vec[1 + 2 * i] & NUM_POS_MASK >> 32, 0, first.size(), compare_ints);
+                trivial.insert(trivial.begin() + k, vec);
+                first.insert(first.begin() + k, vec[1 + 2 * i] & NUM_POS_MASK >> 32);
+                for (s_vec& v : remainder) {
+                    int j = v.index(vec[0]);
+                    if (j < v.non_zero() && v(j) == vec[0]) add(v, - v(j) * vec(0), vec);
+                }
+            }
+        }
+        result = {{1, first.size()}};
+    }
+
+    // Smith
+    int n = remainder.size();
+    for (int i = 0; i < n; i++) {
+        if (i % 100 == 0) std::cout << "\rCalculating Smith Normalform " << i << " / " << remainder.size();
+        int j = -1;
+        sparse<int> temp;
+        std::vector<int> indices;
+        for (int row = i; row < remainder.size(); row++) {
+            if (remainder[row].non_zero() == 0) {
+                temp = remainder[row];
+                remainder[row] = remainder[--n];
+                remainder[n] = temp;
+            } else if (remainder[row][0] < j || j < 0) {
+                indices.clear();
+                indices.push_back(row);
+                j = remainder[row][0];row
+            } else if (remainder[row][0] == j) {
+                indices.push_back(row);
+            }
+        }
+        if (j < 0) break;
+        // is true if we reduce column, false if we reduce row
+        bool col = true;
+        while (true) {
+            if (col) {
+                // Pivot
+                int k = -1; // row index of pivot
+                int h = 0; // index in indices where the pivot lays
+                for (int l = 0; l < indices.size(); l++) {
+                    int row = indices[l];
+                    if (k < 0 || abs(remainder[k](0)) > abs(remainder[row](0))) {
+                        k = row;
+                        h = l;
+                    }
+                }
+                if (k < 0) return result;
+                temp = remainder[i];
+                remainder[i] = remainder[k];
+                remainder[k] = temp;
+                if (indices[0] != i) indices.erase(indices.begin() + h);
+                if (indices[0] == i) indices.erase(indices.begin());
+                std::vector<int> next_indices;
+                next_indices.reserve(indices.size() - 1);
+                int occ = 0;
+                for (int l = 0; l < indices.size(); l++) {
+                    int row = indices[l];
+                    int lambda = remainder[row](0) / remainder[i](0);
+                    add(remainder[row], - lambda, remainder[i]);
+                    if (remainder[row][0] == remainder[i][0]) next_indices[occ++] = row;
+                }
+                indices = next_indices;
+                if (next_indices.size() > 0) {
+                    if (remainder[i].non_zero() > 0) indices.push_back(i);
+                    col = true;
+                } else col = false;
+            } else {
+                for (int l = 1; l < remainder[i].non_zero(); l++) {
+                    remainder[i].get(l) %= remainder[i](0);
+                    if (remainder[i].get(l) == 0) {
+                        remainder[i].remove(l);
+                        l--;
+                    }
+                }
+                if (remainder[i].non_zero() == 1) {
+                    auto it = result.find(abs(remainder[i](0)));
+                    if (it == result.end()) result.emplace(abs(remainder[i](0)), 1);
+                    else (*it).second = (*it).second + 1;
+                    break;
+                } else {
+                    int k = -1;
+                    for (int row = 0; row < remainder[i].non_zero(); row++) {
+                        if (k < 0 || abs(remainder[i](k)) > abs(remainder[i](row))) k = i;
+                    }
+                    int curr = remainder[i](0);
+                    remainder[i].get(0) = remainder[i](k);
+                    remainder[i].get(k) = curr;
+                    for(int row = i + 1; row < n; row++) {
+                        int l = remainder[row].index(remainder[i](k));
+                        if (l < remainder[row].non_zero() && remainder[row][l] == remainder[row][k]) {
+                            curr = remainder[row](l);
+                            remainder[row].remove(l);
+                            remainder[row].insert(0, remainder[i][0], curr);
+                            indices.push_back(row);
+                        }
+                    }
+                    if (indices.size() == 0) col = false;
+                    else {
+                        indices.push_back(i);
+                        col = true;
+                    }
+                }
+            }
+        }
+    }
+    return result;
 }

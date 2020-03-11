@@ -41,83 +41,99 @@ static const ULL NUM_SIGN_MASK = 1ULL << 63;
 static const ULL NUM_POS_MASK = H_MASK ^ NUM_SIGN_MASK;
 static const ULL NUM_OCC_MASK = LL_MASK;
 static const ULL FIFTEEN = LL_MASK & ~(1u << 15);
+static const ULL* MASKS = new ULL[] {
+    H_MASK, L_MASK
+};
+
+/***********************************************************************************************************************
+ * NUM
+ **********************************************************************************************************************/
 
 static void STRIP(ULL const* a, int offset, ULL& occ) {
-    if (offset) {
-        if (occ == 1 && (*a & H_MASK) != 0) {
-            return;
+    int j = occ % 2 == 0 ^ offset ? 0 : 1;
+    ULL const* i = a + occ / 2 + j;
+    if (offset && occ % 2 != 0) j--;
+    for (; i != a; ) {
+        if(!(*i & MASKS[j--])) {
+            occ--;
+        } else return;
+        if (j < 0) {
+            i--;
+            j = 1;
         }
+    }
+    if (!(*i & H_MASK)) {
+        occ--;
+    }
+    if (offset) {
+        occ = 0;
+    } else {
+        if (!(*i & L_MASK)) {
+            occ = 0;
+        }
+    }
+}
+
+static int GET_NUM_POS(const num const& n) {
+    return n->meta & NUM_POS_MASK >> 32
+}
+
+static void SET_NUM_POS(num const& n, int pos) {
+    n->meta = n->meta & ~NUM_POS_MASK | (pos << 32) & NUM_POS_MASK;
+}
+
+static int GET_NUM_OCC(const num const& n) {
+    return n->meta & NUM_OCC_MASK;
+}
+
+static ULL* GET_ABS_DATA(const num const& n) {
+    return (n + 1)->value;
+}
+
+static int COMPARE_ABS(const num const& n_a, const num const& n_b) {
+    int occ = GET_NUM_OCC(n_a);
+    if (occ != GET_NUM_OCC(n_b)) return occ - GET_NUM_OCC(n_b);
+    auto a = GET_ABS_DATA(n_a);
+    auto b = GET_ABS_DATA(n_b);
+    for (int i = 0; i < occ / 2; i++) {
+        if (*a != *b) return *a > *b ? 1 : -1;
         a++;
-        occ--;
+        b++;
     }
-    ULL const* i = a + occ / 2 - (occ % 2 == 0 ? 1 : 0);
     if (occ % 2 != 0) {
-        if ((*i & L_MASK) != 0) {
-            if (offset) occ++;
-            return;
-        }
-        occ--;
+        if ((*a & L_MASK) != (*b & L_MASK)) return (*a & L_MASK) - (*b & L_MASK);
     }
-    for (; i != a; i--) {
-        if ((*i & H_MASK) != 0) {
-            return;
-        }
-        occ--;
-        if ((*i & L_MASK) != 0) {
-            return;
-        }
-        occ--;
-    }
-    if (offset) {
-        a--;
-        occ++;
-        if ((*a & H_MASK) != 0) {
-            return;
-        }
-    }
-    occ = 0;
+    return 0;
 }
 
-static num NEW_NUM(ULL initial_size, bool sign, ULL value) {
-    if (initial_size % 2 != 0) initial_size++;
-    num i = new svec_node[2]{
-        {.meta = (sign ? NUM_SIGN_MASK : 0u) | ((initial_size & LL_MASK) << 16) | 1u},
-        {.value = new ULL[initial_size / 2]}
-    };
-    *((i + 1)->value) = value;
-    return i;
-}
-
-static s_vec NEW_VEC(std::vector<std::pair<ULL, std::pair<bool, ULL>>> vector) {
-    s_vec v = new svec_node[1 + 2 * vector.size()];
-    v[0] = {.meta = ((ULL) vector.size()) << 32 | ((ULL) vector.size()) & L_MASK};
-    int i = 1;
-    for (auto it = vector.begin(); it != vector.end(); it++) {
-        num n = NEW_NUM(1u, it->second.first, it->second.second);
-        n->meta |= (it->first & FIFTEEN) << 32;
-        v[i++] = *n;
-        v[i++] = *(n + 1);
+struct NUM_COMPARATOR {
+    bool operator()(const num const& a, const num const& b) const {
+        if ((a->meta ^ b->meta) & NUM_SIGN_MASK) return GET_NUM_SIGN(a) ? b : a;
+        if (COMPARE_ABS(a, b) < 0) {
+            return !GET_NUM_SIGN(a);
+        } else return GET_NUM_SIGN(a);
     }
-    return v;
-}
+};
 
-static void DEL_NUM(num i) {
-    ULL size = (i->meta & ~NUM_SIGN_MASK) >> 32;
-    delete[] (i + 1)->value;
-    delete (i + 1);
-    delete i;
-}
-
-static void DEL_VEC(s_vec v) {
-    ULL occ = v->meta & L_MASK;
-    for (int i = 0; i < occ; i++) {
-        DEL_NUM(v + (1 + 2 * i));
+struct NUM_ABS_COMPARATOR() {
+    bool operator()(const num const& a, const num const& b) const {
+        return COMPARE_ABS(a, b) < 0;
     }
-    delete[] v;
 }
+
+static bool GET_NUM_SIGN(const num const& n) {
+    return n->meta & NUM_SIGN_MASK;
+}
+
+static void SWITCH_NUM_SIGN(num const& n) {
+    n->meta ^= NUM_SIGN_MASK;
+}
+
+/***********************************************************************************************************************
+ * NUM - ARITHMETIC
+ **********************************************************************************************************************/
 
 /**
- *
  * @param result result memory block. But care; we are assuming that result reserves enough space to save the product!
  * @param a
  * @param b
@@ -125,8 +141,8 @@ static void DEL_VEC(s_vec v) {
  * @param b_occ range of occupation of b, i.e. how many digits does b have in base 2^64
  */
 static void KMUL(ULL* result, bool offset, ULL const* a, ULL a_occ, bool a_off, ULL const* b, ULL b_occ, bool b_off) {
-//    STRIP(a, a_off, a_occ);
-//    STRIP(b, b_off, b_occ);
+    STRIP(a, a_off, a_occ);
+    STRIP(b, b_off, b_occ);
     std::cout << offset << " " << *a << " " << a_occ << " " << a_off << " " << *b << " " << b_occ << " " << b_off << std::endl;
     if (a_occ == 0 || b_occ == 0) return;
     if (a_occ < b_occ) {
@@ -198,6 +214,118 @@ static void MUL(num& result, const num& lambda, const num& b) {
 
 static bool ADD_NUM(num a, num b) {
     return true;
+}
+
+/**
+ * Sets b to be b % a.
+ * @param a Divisor
+ * @param b Dividend
+ */
+static void MOD(num const& a, const num const& b) {
+
+}
+
+/***********************************************************************************************************************
+ * NUM - (DE)ALLOCATION
+ **********************************************************************************************************************/
+
+static num NEW_NUM(ULL initial_size, bool sign, ULL value) {
+    if (initial_size % 2 != 0) initial_size++;
+    num i = new svec_node[2]{
+            {.meta = (sign ? NUM_SIGN_MASK : 0u) | ((initial_size & LL_MASK) << 16) | 1u},
+            {.value = new ULL[initial_size / 2]}
+    };
+    *((i + 1)->value) = value;
+    return i;
+}
+
+static void DEL_NUM_DATA(num& i) {
+    delete[] (i + 1)->value;
+}
+
+static void DEL_NUM(num& i) {
+    delete (i + 1);
+    delete i;
+}
+
+/***********************************************************************************************************************
+ * VECTOR
+ **********************************************************************************************************************/
+
+static int GET_VEC_SIZE(const s_vec const& v) {
+    return v->meta >> 32;
+}
+
+static int GET_VEC_OCC(const s_vec const& v) {
+    return v->meta & L_MASK;
+}
+
+static void SET_VEC_OCC(s_vec const& v, int occ) {
+    v->meta = v & H_MASK | (ULL) occ;
+}
+
+static num VEC_AT(const s_vec const& v, const int i) {
+    return v + 1 + 2 * i;
+}
+
+static void SWITCH_VEC_SIGN(s_vec const& v) {
+    int occ = GET_VEC_OCC(v);
+    for (int i = 0; i < occ; i++) {
+        SWITCH_NUM_SIGN(VEC_AT(v, i));
+    }
+}
+
+static void VEC_SWAP_VALUES(s_vec const& v, int i, int j) {
+    ULL temp = VEC_AT(v, i)->meta;
+    VEC_AT(v, i)->meta = VEC_AT(v, j)->meta & ~NUM_POS_MASK | temp & NUM_POS_MASK;
+    VEC_AT(v, j)->meta = temp & ~NUM_POS_MASK | VEC_AT(v,j) & NUM_POS_MASK;
+    // swap data pointers
+    std::swap(VEC_AT(v, i) + 1, VEC_AT(v, j) + 1);
+}
+
+static int VEC_FIND_POS(const s_vec const& v, int pos) {
+
+}
+
+static void VEC_PUT(s_vec const& v, const num const& n) {
+    int k = VEC_FIND_POS(v, GET_NUM_POS(n));
+    if (GET_VEC_SIZE(v) >= GET_VEC_OCC(v)) {
+        ENLARGE_VEC(v);
+    }
+    if (k < GET_VEC_OCC(v)) {
+        std::copy_backward(VEC_AT(v, k), VEC_AT(v, GET_VEC_OCC(v)), VEC_AT(v, GET_VEC_OCC(v) + 2));
+    }
+}
+
+/***********************************************************************************************************************
+ * VECTOR - (DE)ALLOCATION
+ **********************************************************************************************************************/
+
+static s_vec NEW_VEC(std::vector<std::pair<ULL, std::pair<bool, ULL>>> vector) {
+    s_vec v = new svec_node[1 + 2 * vector.size()];
+    v[0] = {.meta = ((ULL) vector.size()) << 32 | ((ULL) vector.size()) & L_MASK};
+    int i = 1;
+    for (auto it = vector.begin(); it != vector.end(); it++) {
+        num n = NEW_NUM(1u, it->second.first, it->second.second);
+        n->meta |= (it->first & FIFTEEN) << 32;
+        v[i++] = *n;
+        v[i++] = *(n + 1);
+    }
+    return v;
+}
+
+static void DEL_VEC(s_vec& v) {
+    ULL occ = v->meta & L_MASK;
+    for (int i = 0; i < occ; i++) {
+        DEL_NUM(v + (1 + 2 * i));
+    }
+    delete[] v;
+}
+
+static void DEL_POS(s_vec& v, int i) {
+    DEL_NUMDATA(VEC_AT(v, i));
+    std::copy(VEC_AT(i + 1), VEC_AT(GET_VEC_OCC(v)), VEC_AT(i));
+    SET_VEC_OCC(v, GET_VEC_OCC(v) - 1);
 }
 
 /** Adds lambda * b to a.

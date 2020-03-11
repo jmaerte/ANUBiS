@@ -13,7 +13,7 @@
 #include <unordered_map>
 #include "multi_thread/rw_mutex.hpp"
 #include "data_types/lin/sparse.hpp"
-#include "calc/arithmetic.hpp"
+#include "arithmetic.hpp"
 #include <ANUBIS_EXPORT.h>
 
 template<class T>
@@ -51,7 +51,7 @@ namespace jmaerte {
 
             virtual void facet_insert(const std::vector<unsigned int> *) = 0;
             std::vector<double> laplacian_spectrum(int i);
-            virtual std::map<int, unsigned int> homology(int dim) = 0;
+            virtual std::map<num, unsigned int, NUM_COMPARATOR> homology(int dim) = 0;
 
             std::vector<int> f_vector();
         };
@@ -64,7 +64,7 @@ namespace jmaerte {
             std::mutex facet_mutex;
             std::vector<std::vector<unsigned int>> facets;
             std::map<unsigned int, unsigned int *> past;
-            std::map<unsigned int, std::map<int, unsigned int>> smith_forms;
+            std::map<unsigned int, std::map<num, unsigned int, NUM_COMPARATOR>> smith_forms;
             int vertices;
 
             stream<sparse<double>> laplacian(int i) override;
@@ -88,7 +88,7 @@ namespace jmaerte {
             unsigned int * generate(unsigned int dim);
             bool calculated(unsigned int dim);
 
-            std::map<int, unsigned int> homology(int dim) override;
+            std::map<num, unsigned int, NUM_COMPARATOR> homology(int dim) override;
 
             static s_list* from_file(
                     const std::string &,
@@ -145,7 +145,7 @@ namespace jmaerte {
 
             void facet_insert(const std::vector<unsigned int> *) override;
             void print();
-            std::map<int, unsigned int> homology(int i) override;
+            std::map<num, unsigned int, NUM_COMPARATOR> homology(int i) override;
 
             static s_tree * from_file(
                     const std::string &,

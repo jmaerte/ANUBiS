@@ -41,7 +41,7 @@ static const ULL NUM_SIGN_MASK = 1ULL << 63;
 static const ULL NUM_POS_MASK = H_MASK ^ NUM_SIGN_MASK;
 static const ULL NUM_OCC_MASK = LL_MASK;
 static const ULL FIFTEEN = LL_MASK & ~(1u << 15);
-static const ULL* MASKS = new ULL[] {
+static const ULL MASKS[] = {
     H_MASK, L_MASK
 };
 
@@ -74,23 +74,35 @@ static void STRIP(ULL const* a, int offset, ULL& occ) {
     }
 }
 
-static int GET_NUM_POS(const num const& n) {
-    return n->meta & NUM_POS_MASK >> 32
+static int GET_NUM_POS(num const n) {
+    return n->meta & NUM_POS_MASK >> 32;
 }
 
-static void SET_NUM_POS(num const& n, int pos) {
-    n->meta = n->meta & ~NUM_POS_MASK | (pos << 32) & NUM_POS_MASK;
+static void SET_NUM_POS(num n, int pos) {
+    n->meta = n->meta & ~NUM_POS_MASK | ((ULL) pos << 32) & NUM_POS_MASK;
 }
 
-static int GET_NUM_OCC(const num const& n) {
+static int GET_NUM_OCC(num const n) {
     return n->meta & NUM_OCC_MASK;
 }
 
-static ULL* GET_ABS_DATA(const num const& n) {
+static ULL* GET_ABS_DATA(num const n) {
     return (n + 1)->value;
 }
 
-static int COMPARE_ABS(const num const& n_a, const num const& n_b) {
+static bool GET_NUM_SIGN(num const n) {
+    return n->meta & NUM_SIGN_MASK;
+}
+
+static int GET_NUM_SIZE(num const n) {
+    return n->meta & LL_MASK;
+}
+
+static void SWITCH_NUM_SIGN(num n) {
+    n->meta ^= NUM_SIGN_MASK;
+}
+
+static int COMPARE_ABS(num const n_a, num const n_b) {
     int occ = GET_NUM_OCC(n_a);
     if (occ != GET_NUM_OCC(n_b)) return occ - GET_NUM_OCC(n_b);
     auto a = GET_ABS_DATA(n_a);
@@ -106,8 +118,13 @@ static int COMPARE_ABS(const num const& n_a, const num const& n_b) {
     return 0;
 }
 
+static void SET_NUM(num a, num const& b) {
+    *a = *b;
+    *(a + 1) = *(b + 1);
+}
+
 struct NUM_COMPARATOR {
-    bool operator()(const num const& a, const num const& b) const {
+    bool operator()(num const& a, num const& b) const {
         if ((a->meta ^ b->meta) & NUM_SIGN_MASK) return GET_NUM_SIGN(a) ? b : a;
         if (COMPARE_ABS(a, b) < 0) {
             return !GET_NUM_SIGN(a);
@@ -115,18 +132,48 @@ struct NUM_COMPARATOR {
     }
 };
 
-struct NUM_ABS_COMPARATOR() {
-    bool operator()(const num const& a, const num const& b) const {
+struct NUM_ABS_COMPARATOR {
+    bool operator()(num const& a, num const& b) const {
         return COMPARE_ABS(a, b) < 0;
     }
+};
+
+/***********************************************************************************************************************
+ * NUM - (DE)ALLOCATION
+ **********************************************************************************************************************/
+
+static num NEW_NUM(ULL initial_size, bool sign, ULL value) {
+    if (initial_size % 2 != 0) initial_size++;
+    num i = new svec_node[2]{
+            {.meta = (sign ? NUM_SIGN_MASK : 0u) | ((initial_size & LL_MASK) << 16) | 1u},
+            {.value = new ULL[initial_size / 2] { }}
+    };
+    *((i + 1)->value) = value;
+    return i;
 }
 
-static bool GET_NUM_SIGN(const num const& n) {
-    return n->meta & NUM_SIGN_MASK;
+static num NEW_NUM(ULL* value, int size, int occ, bool sign) {
+    return new svec_node[2] {
+            {.meta = (sign ? NUM_SIGN_MASK : 0u) | ((ULL) size & LL_MASK << 16) | ((ULL) occ & LL_MASK)},
+            {.value = value}
+    };
 }
 
-static void SWITCH_NUM_SIGN(num const& n) {
-    n->meta ^= NUM_SIGN_MASK;
+static num COPY_NUM(num const n) {
+    num res = NEW_NUM(GET_NUM_OCC(n), GET_NUM_SIGN(n), GET_ABS_DATA(n)[0]);
+    for (int i = 1; i < GET_NUM_OCC(n); i++) {
+        GET_ABS_DATA(res)[i] = GET_ABS_DATA(n)[i];
+    }
+    return res;
+}
+
+static void DEL_NUM_DATA(num i) {
+    delete[] (i + 1)->value;
+}
+
+static void DEL_NUM(num i) {
+    delete (i + 1);
+    delete i;
 }
 
 /***********************************************************************************************************************
@@ -179,40 +226,26 @@ static void KMUL(ULL* result, bool offset, ULL const* a, ULL a_occ, bool a_off, 
     }
 }
 
-static void MUL(num& result, const num& lambda, const num& b) {
-    // set result to lambda * b
-    ULL lambda_length = lambda->meta & NUM_OCC_MASK >> 32;
-    ULL b_length = b->meta & NUM_OCC_MASK >> 32;
-    if (lambda_length > b_length) {
-        MUL(result, b, lambda);
-        return;
+/**
+ * Adds lambda * b to result.
+ * @param result
+ * @param lambda
+ * @param b
+ */
+static num MUL(const num& lambda, const num& b) {
+    if (GET_NUM_OCC(lambda) > GET_NUM_OCC(b)) {
+        return MUL(b, lambda);
     }
-    if (lambda_length < THRSH_KARATSUBA || b_length < THRSH_KARATSUBA) {
-        // perform standard multiplication
-        bool lambda_sign = (bool) (lambda->meta & NUM_SIGN_MASK);
-        bool b_sign = (bool) (b->meta & NUM_SIGN_MASK);
-        result = new svec_node {0};
-        if (lambda_sign != b_sign) {
-            result->meta |= (1ULL << 63);
-        }
-        result->meta |= (b->meta & NUM_POS_MASK);
-        ULL LEN = lambda_length + b_length;
-        ULL* prod = new ULL[LEN / 2 + LEN % 2](); // round up N/2.
-        ULL* j = (b + 1)->value;
-        ULL* l = (lambda + 1)->value;
-        ULL* k = prod;
-        ULL carry = 0ULL;
-//        for (; ; ) {
-//            carry =
-//        }
-    } else {
-        KMUL((result + 1)->value, false, (lambda + 1)->value, lambda_length, false, (b + 1)->value, b_length, false);
-    }
-    ULL occ = lambda_length + b_length;
-    STRIP((result + 1)->value, false, occ);
+    int occ = GET_NUM_OCC(lambda) + GET_NUM_OCC(b);
+    ULL* result = new ULL[occ / 2 + occ % 2];
+    KMUL(result, false, (lambda + 1)->value, GET_NUM_OCC(lambda), false, (b + 1)->value, GET_NUM_OCC(b), false);
+    return NEW_NUM(result, 2 * (occ / 2 + occ % 2), occ, GET_NUM_SIGN(lambda) ^ GET_NUM_SIGN(b));
 }
 
-static bool ADD_NUM(num a, num b) {
+static bool ADD_NUM(num& a, num const& b) {
+    if (GET_NUM_OCC(b) > GET_NUM_OCC(a)) {
+
+    }
     return true;
 }
 
@@ -221,73 +254,78 @@ static bool ADD_NUM(num a, num b) {
  * @param a Divisor
  * @param b Dividend
  */
-static void MOD(num const& a, const num const& b) {
+static void MOD(num a, num const b) {
 
 }
 
-/***********************************************************************************************************************
- * NUM - (DE)ALLOCATION
- **********************************************************************************************************************/
+static num DIVIDE(num a, num b) {
 
-static num NEW_NUM(ULL initial_size, bool sign, ULL value) {
-    if (initial_size % 2 != 0) initial_size++;
-    num i = new svec_node[2]{
-            {.meta = (sign ? NUM_SIGN_MASK : 0u) | ((initial_size & LL_MASK) << 16) | 1u},
-            {.value = new ULL[initial_size / 2]}
-    };
-    *((i + 1)->value) = value;
-    return i;
-}
-
-static void DEL_NUM_DATA(num& i) {
-    delete[] (i + 1)->value;
-}
-
-static void DEL_NUM(num& i) {
-    delete (i + 1);
-    delete i;
 }
 
 /***********************************************************************************************************************
  * VECTOR
  **********************************************************************************************************************/
 
-static int GET_VEC_SIZE(const s_vec const& v) {
+static int GET_VEC_SIZE(s_vec const v) {
     return v->meta >> 32;
 }
 
-static int GET_VEC_OCC(const s_vec const& v) {
+static int GET_VEC_OCC(s_vec const v) {
     return v->meta & L_MASK;
 }
 
-static void SET_VEC_OCC(s_vec const& v, int occ) {
-    v->meta = v & H_MASK | (ULL) occ;
+static void SET_VEC_OCC(s_vec v, int occ) {
+    v->meta = v->meta & H_MASK | (ULL) occ;
 }
 
-static num VEC_AT(const s_vec const& v, const int i) {
+static num VEC_AT(s_vec const v, const int i) {
     return v + 1 + 2 * i;
 }
 
-static void SWITCH_VEC_SIGN(s_vec const& v) {
+static void ENLARGE_VEC(s_vec v, int size) {
+    s_vec next = new svec_node[2 * size + 1];
+    std::copy(v, VEC_AT(v, GET_VEC_OCC(v)), next);
+    SET_NUM(v, next);
+}
+
+static void ENLARGE_VEC(s_vec& v) {
+    ENLARGE_VEC(v, 2 * GET_VEC_SIZE(v));
+}
+
+static void SWITCH_VEC_SIGN(s_vec v) {
     int occ = GET_VEC_OCC(v);
     for (int i = 0; i < occ; i++) {
         SWITCH_NUM_SIGN(VEC_AT(v, i));
     }
 }
 
-static void VEC_SWAP_VALUES(s_vec const& v, int i, int j) {
+static void VEC_SWAP_VALUES(s_vec& v, int i, int j) {
     ULL temp = VEC_AT(v, i)->meta;
     VEC_AT(v, i)->meta = VEC_AT(v, j)->meta & ~NUM_POS_MASK | temp & NUM_POS_MASK;
-    VEC_AT(v, j)->meta = temp & ~NUM_POS_MASK | VEC_AT(v,j) & NUM_POS_MASK;
+    VEC_AT(v, j)->meta = temp & ~NUM_POS_MASK | VEC_AT(v,j)->meta & NUM_POS_MASK;
     // swap data pointers
-    std::swap(VEC_AT(v, i) + 1, VEC_AT(v, j) + 1);
+    auto a = VEC_AT(v, i) + 1;
+    *(VEC_AT(v, i) + 1) = *(VEC_AT(v, j) + 1);
+    *(VEC_AT(v, j) + 1) = *a;
 }
 
-static int VEC_FIND_POS(const s_vec const& v, int pos) {
-
+static int VEC_FIND_POS(s_vec const& v, int pos) {
+    int occ = GET_VEC_OCC(v);
+    if (occ == 0 || GET_NUM_POS(VEC_AT(v, occ - 1)) < pos) return occ;
+    if (GET_NUM_POS(VEC_AT(v, 0)) < pos) return 0;
+    int min = 0;
+    int max = occ;
+    int compare = 0;
+    while (min < max) {
+        int mid = (min + max)/2;
+        if (GET_NUM_POS(VEC_AT(v, mid)) < pos) min = mid + 1;
+        else if (GET_NUM_POS(VEC_AT(v, mid)) > pos) max = mid;
+        else return mid;
+    }
+    return min;
 }
 
-static void VEC_PUT(s_vec const& v, const num const& n) {
+static void VEC_PUT(s_vec v, num const& n) {
     int k = VEC_FIND_POS(v, GET_NUM_POS(n));
     if (GET_VEC_SIZE(v) >= GET_VEC_OCC(v)) {
         ENLARGE_VEC(v);
@@ -295,6 +333,8 @@ static void VEC_PUT(s_vec const& v, const num const& n) {
     if (k < GET_VEC_OCC(v)) {
         std::copy_backward(VEC_AT(v, k), VEC_AT(v, GET_VEC_OCC(v)), VEC_AT(v, GET_VEC_OCC(v) + 2));
     }
+    *VEC_AT(v, k) = *n;
+    *(VEC_AT(v, k) + 1) = *(n + 1);
 }
 
 /***********************************************************************************************************************
@@ -317,16 +357,20 @@ static s_vec NEW_VEC(std::vector<std::pair<ULL, std::pair<bool, ULL>>> vector) {
 static void DEL_VEC(s_vec& v) {
     ULL occ = v->meta & L_MASK;
     for (int i = 0; i < occ; i++) {
-        DEL_NUM(v + (1 + 2 * i));
+        DEL_NUM(VEC_AT(v, i));
     }
     delete[] v;
 }
 
 static void DEL_POS(s_vec& v, int i) {
-    DEL_NUMDATA(VEC_AT(v, i));
-    std::copy(VEC_AT(i + 1), VEC_AT(GET_VEC_OCC(v)), VEC_AT(i));
+    DEL_NUM_DATA(VEC_AT(v, i));
+    std::copy(VEC_AT(v, i + 1), VEC_AT(v, GET_VEC_OCC(v)), VEC_AT(v, i));
     SET_VEC_OCC(v, GET_VEC_OCC(v) - 1);
 }
+
+/***********************************************************************************************************************
+ * VECTOR - ARITHMETIC
+ **********************************************************************************************************************/
 
 /** Adds lambda * b to a.
  *
@@ -335,72 +379,43 @@ static void DEL_POS(s_vec& v, int i) {
  * @param size_lambda number of ULLs needed to represent lambda
  * @param b addend
  */
-//static void ADD(s_vec& a, const num& lambda, const s_vec& b) {
-//    ULL a_meta = a->meta;
-//    ULL a_size = (a_meta >> 32);// - 1ULL; ?
-//    ULL a_occupation = a_meta & L_MASK;
-//    svec_node* a_start = (a + 1);
-//    svec_node* a_end = a_start + a_occupation;
-//
-//    ULL b_meta = b->meta;
-////    ULL b_size = (b_meta >> 32) - 1ULL;
-//    ULL b_occupation = b_meta & L_MASK;
-//    svec_node* b_start = (b + 1);
-//    svec_node* b_end = b_start + b_occupation;
-//
-//    ULL lambda_meta = lambda->meta;
-//    ULL lambda_occupation = lambda_meta & L_MASK;
-//
-//    svec_node* i = a_start;
-//    svec_node* j = b_start;
-//
-//    ULL a_pos, b_pos;
-//    for (; i != a_end && j != b_end; ) {
-//        if ((a_pos = i->meta & NUM_POS_MASK) < (b_pos = j->meta & NUM_POS_MASK)) {
-//            i += 2;
-//        } else if (a_pos > b_pos) {
-//            if (a_occupation + 2 > a_size) {
-//                s_vec next = new svec_node[a_size * 2 + 1];
-//                std::copy(a, a_end, next);
-//                a = next;
-//                a_size *= 2;
-//            }
-//            // copy j and j + 1 into a.
-//            std::copy_backward(i, a_end, a_end + 2);
-//            // new number = lambda * (*j)
-//            *i = {.meta = (lambda_occupation + (j->meta & NUM_OCC_MASK)) << 32};
-//            *(i + 1) = {.value = new ULL[lambda_occupation + (j->meta & NUM_OCC_MASK)]};
-//            MUL(i, lambda, j);
-//            a_end += 2;
-//            a_occupation += 2;
-//            i += 2;
-//            j += 2;
-//        } else {
-//            ULL meta = 0;
-//            ULL* address = new ULL[lambda_occupation + b_occupation];
-//            meta |= lambda_occupation + b_occupation;
-//            num prod = new svec_node[2] {
-//                    {.meta = meta},
-//                    {.value = address}
-//            };
-//            if(ADD_NUM(i, prod)) {
-//                std::copy(i + 2, a_end, i);
-//                a_end -= 2;
-//            } else i += 2;
-//            j += 2;
-//        }
-//    }
-//
-//    if (j != b_end) {
-//        if (a_occupation + b_end - j > a_size) {
-//            s_vec next = new svec_node[a_size * 2 + 1];
-//            std::copy(a, a_end, next);
-//            a = next;
-//            a_size *= 2;
-//        }
-//        std::copy(j, b_end, a_end);
-//    }
-//    a->meta = (a_size << 32) | a_occupation;
-//}
+static void ADD(s_vec& a, const num& lambda, const s_vec& b) {
+    num a_end = VEC_AT(a, GET_VEC_OCC(a));
+    num b_end = VEC_AT(b, GET_VEC_OCC(b));
+
+    num it_a = VEC_AT(a, 0);
+    num j = VEC_AT(b, 0);
+
+    for (int i = 0; i != GET_VEC_OCC(a) && j != b_end;) {
+        if (GET_NUM_POS(it_a) < GET_NUM_POS(j)) {
+            i++;
+            it_a += 2;
+        } else if (GET_NUM_POS(it_a) > GET_NUM_POS(j)) {
+            if (GET_VEC_OCC(a) + 2 > GET_VEC_SIZE(a)) {
+                ENLARGE_VEC(a);
+                it_a = VEC_AT(a, i);
+                a_end = VEC_AT(a, GET_VEC_OCC(a));
+            }
+            // copy j and j + 1 into a.
+            std::copy_backward(it_a, a_end, a_end + 2);
+            SET_NUM(it_a, MUL(lambda, j));
+            SET_VEC_OCC(a, GET_VEC_OCC(a) + 1);
+            j += 2;
+        } else {
+            ADD_NUM(it_a, MUL(lambda, j));
+            it_a += 2;
+            i++;
+            j += 2;
+        }
+    }
+
+    if (j != b_end) {
+        if (GET_VEC_OCC(a) + (b_end - j) / 2 > GET_VEC_SIZE(a)) {
+            ENLARGE_VEC(a, GET_VEC_OCC(a) + (b_end - j) / 2);
+            a_end = VEC_AT(a, GET_VEC_OCC(a));
+        }
+        std::copy(j, b_end, a_end);
+    }
+}
 
 #endif //ANUBIS_SUPERBUILD_ARITHMETIC_HPP

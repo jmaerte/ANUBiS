@@ -381,14 +381,14 @@ namespace jmaerte {
             return vertices / UINT_SIZE + (vertices % UINT_SIZE == 0 ? 0 : 1);
         }
 
-        std::map<int, unsigned int> s_list::homology(int dim) {
+        std::map<num, unsigned int, NUM_COMPARATOR> s_list::homology(int dim) {
             auto it_dim = smith_forms.find(dim);
             if (it_dim == smith_forms.end()) {
                 smith_forms.emplace(dim, smith(boundary(dim)));
                 it_dim = smith_forms.find(dim);
             }
             auto d_map = it_dim->second;
-            int kernel_rank = f[dim];
+            unsigned int kernel_rank = f[dim];
             if (dim > 0) {
 
                 it_dim = smith_forms.find(dim - 1);
@@ -405,13 +405,13 @@ namespace jmaerte {
                 }
                 kernel_rank -= rank_low;
             }
-            std::map<int, unsigned int> result {};
-            int rank = kernel_rank;
+            std::map<num, unsigned int, NUM_COMPARATOR> result {};
+            unsigned int rank = kernel_rank;
             for (auto kv : d_map) {
-                if (kv.first != 1) result.emplace(kv.first, kv.second);
+                if (!(GET_NUM_OCC(kv.first) == 1 && GET_ABS_DATA(kv.first)[0] == 1ULL)) result.emplace(kv.first, kv.second);
                 rank -= kv.second;
             }
-            result.emplace(0, rank);
+            result.emplace(NEW_NUM(1, false, 0ULL), rank);
         }
 
         /***************************************************************************************************************
@@ -513,8 +513,8 @@ namespace jmaerte {
             return stream<s_vec>();
         }
 
-        std::map<int, unsigned int> s_tree::homology(int i) {
-            return std::map<int, unsigned int>();
+        std::map<num, unsigned int, NUM_COMPARATOR> s_tree::homology(int i) {
+            return std::map<num, unsigned int, NUM_COMPARATOR>();
         }
 
         /***********************************************************************************************************

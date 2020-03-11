@@ -7,7 +7,8 @@ set(${LIBRARY_TARGET_NAME}_SRC
 		src/data_types/potence/potence.cpp)
 
 set(${LIBRARY_TARGET_NAME}_PUBLIC_HDR
-		include/ANUBiS/complex.hpp)
+		include/ANUBiS/complex.hpp
+		include/ANUBiS/arithmetic.hpp)
 
 set(${LIBRARY_TARGET_NAME}_PRIVATE_HDR
 		src/calc/computation.hpp
@@ -17,8 +18,7 @@ set(${LIBRARY_TARGET_NAME}_PRIVATE_HDR
 		src/multi_thread/thread_pool.hpp
 		src/multi_thread/rw_mutex.hpp
 		src/calc/computation.hpp
-		src/calc/utils.hpp
-		src/calc/arithmetic.hpp)
+		src/calc/utils.hpp)
 
 add_library(${LIBRARY_TARGET_NAME} SHARED ${${LIBRARY_TARGET_NAME}_SRC} ${${LIBRARY_TARGET_NAME}_PUBLIC_HDR} ${${LIBRARY_TARGET_NAME}_PRIVATE_HDR})
 

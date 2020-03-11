@@ -13,7 +13,7 @@
 #include "data_types/lazy/stream.hpp"
 #include "data_types/lin/sparse.hpp"
 #include "utils.hpp"
-#include "arithmetic.hpp"
+#include "../../include/ANUBiS/arithmetic.hpp"
 
 double machine_eps = 1e-8;
 
@@ -182,11 +182,11 @@ void add (sparse<int>& a, int lambda, sparse<int>& b) {
 /***********************************************************************************************************************
  * Smith normalform
  **********************************************************************************************************************/
-std::map<int, unsigned int> smith(stream<s_vec>&& matrix) {
-    return smith(matrix);
+std::map<num, unsigned int, NUM_COMPARATOR> smith(stream<s_vec>&& matrix) {
+    return smith(std::forward<stream<s_vec>>(matrix));
 }
 
-std::map<int, unsigned int> smith(stream<s_vec>& matrix) {
+std::map<num, unsigned int, NUM_COMPARATOR> smith(stream<s_vec>& matrix) {
     //    std::cout << "hom" << std::endl;
 //    ULL* a = new unsigned long long;
 //    *a = ((1ULL << 31) + (1ULL << 32));
@@ -204,7 +204,7 @@ std::map<int, unsigned int> smith(stream<s_vec>& matrix) {
     std::map<num, unsigned int, NUM_COMPARATOR> result;
     {
         std::vector<s_vec> trivial;
-        std::vector<ULL> first;
+        std::vector<int> first;
         int count = 0;
         while (!matrix.is_empty()) {
             s_vec vec = matrix.get();
@@ -226,21 +226,21 @@ std::map<int, unsigned int> smith(stream<s_vec>& matrix) {
             if (GET_NUM_OCC(VEC_AT(vec, 0)) == 1 && *((vec + 2)->value) == 1ULL) {
                 // assert that the leading entry is -1.
                 if (!GET_NUM_SIGN(VEC_AT(vec, 0))) SWITCH_VEC_SIGN(vec);
-                pos = GET_NUM_POS(VEC_AT(vec, i));
+                pos = GET_NUM_POS(VEC_AT(vec, 0));
                 k = binary_search(first, pos, 0, first.size(), compare_ints);
                 trivial.insert(trivial.begin() + k, vec);
                 first.insert(first.begin() + k, pos);
                 for (s_vec& v : remainder) {
                     int j = VEC_FIND_POS(v, pos);
                     if (j < GET_VEC_OCC(v) && GET_NUM_POS(VEC_AT(v, j)) == pos) {
-                        ADD(v, VEC_AT(j), vec);
+                        ADD(v, VEC_AT(v, j), vec);
                     }
                 }
             } else {
                 remainder.push_back(vec);
             }
         }
-        result.emplace(1, first.size());
+        result.emplace(NEW_NUM(1, false, 1ULL), first.size());
     }
 
     int n = remainder.size();// amount of non-trivial vectors in remainder.
@@ -313,10 +313,12 @@ std::map<int, unsigned int> smith(stream<s_vec>& matrix) {
                     }
                 }
                 if (GET_VEC_OCC(temp) == 1) {
-                    // TODO: Copy the num out of remainder[i] and delete/free space of remainder[i].
-                    auto it = result.find(VEC_AT(remainder[i], 0));
-                    if (it == result.end()) result.emplace(VEC_AT(remainder[i], 0), 1u);
+                    auto it = result.find(VEC_AT(temp, 0));
+                    if (it == result.end()) {
+                        result.emplace(COPY_NUM(VEC_AT(temp, 0)), 1u);
+                    }
                     else (*it).second = (*it).second + 1u;
+                    DEL_VEC(temp);
                     break;
                 } else {
                     int k = -1;
@@ -328,10 +330,8 @@ std::map<int, unsigned int> smith(stream<s_vec>& matrix) {
                         int l = VEC_FIND_POS(remainder[row], GET_NUM_POS(VEC_AT(remainder[i], k)));
                         if (l < GET_VEC_OCC(remainder[row]) && GET_NUM_POS(VEC_AT(remainder[row], l)) == GET_NUM_POS(VEC_AT(remainder[row], k))) {
                             SET_NUM_POS(VEC_AT(remainder[row], l), GET_NUM_POS(VEC_AT(remainder[i], 0)));
-                            VEC_PUT(VEC_AT(remainder[row], l));
-                            curr = remainder[row](l);
-                            remainder[row].remove(l);
-                            remainder[row].insert(0, remainder[i][0], curr);
+                            VEC_PUT(remainder[row], VEC_AT(remainder[row], l));
+                            DEL_POS(remainder[row], l + 1);
                             indices.push_back(row);
                         }
                     }

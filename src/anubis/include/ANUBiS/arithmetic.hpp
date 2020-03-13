@@ -123,6 +123,14 @@ static void SET_NUM(num a, num const& b) {
     *(a + 1) = *(b + 1);
 }
 
+static void PREPARE_NUM_SVOBODA(num n) {
+
+}
+
+/***********************************************************************************************************************
+ * NUM - COMPARATORS
+ **********************************************************************************************************************/
+
 struct NUM_COMPARATOR {
     bool operator()(num const& a, num const& b) const {
         if ((a->meta ^ b->meta) & NUM_SIGN_MASK) return GET_NUM_SIGN(a) ? b : a;
@@ -254,11 +262,17 @@ static bool ADD_NUM(num& a, num const& b) {
  * @param a Divisor
  * @param b Dividend
  */
-static void MOD(num a, num const b) {
+static void SMOD(num a, num const b) {
 
 }
 
-static num DIVIDE(num a, num b) {
+/**
+ * SVOBODA
+ * @param a
+ * @param b
+ * @return
+ */
+static num SDIV(num const a, num const b) {
 
 }
 
@@ -337,6 +351,10 @@ static void VEC_PUT(s_vec v, num const& n) {
     *(VEC_AT(v, k) + 1) = *(n + 1);
 }
 
+static void PREPARE_VEC_SVOBODA(s_vec v) {
+
+}
+
 /***********************************************************************************************************************
  * VECTOR - (DE)ALLOCATION
  **********************************************************************************************************************/
@@ -379,14 +397,14 @@ static void DEL_POS(s_vec& v, int i) {
  * @param size_lambda number of ULLs needed to represent lambda
  * @param b addend
  */
-static void ADD(s_vec& a, const num& lambda, const s_vec& b) {
+static void ADD(s_vec& a, int start_a, const num& lambda, const s_vec& b, int start_b) {
     num a_end = VEC_AT(a, GET_VEC_OCC(a));
     num b_end = VEC_AT(b, GET_VEC_OCC(b));
 
-    num it_a = VEC_AT(a, 0);
-    num j = VEC_AT(b, 0);
+    num it_a = VEC_AT(a, start_a);
+    num j = VEC_AT(b, start_b);
 
-    for (int i = 0; i != GET_VEC_OCC(a) && j != b_end;) {
+    for (int i = start_a; i != GET_VEC_OCC(a) && j != b_end;) {
         if (GET_NUM_POS(it_a) < GET_NUM_POS(j)) {
             i++;
             it_a += 2;

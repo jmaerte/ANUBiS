@@ -291,11 +291,13 @@ std::map<num, unsigned int, NUM_COMPARATOR> smith(stream<s_vec>& matrix) {
                 std::vector<int> next_indices;
                 next_indices.reserve(indices.size() - 1);
                 int occ = 0;
+                // TODO: Precompute dividend for remainder[i][0] to divide more efficiently
+                PREPARE_VEC_SVOBODA(remainder[i]);
                 for (int l = 0; l < indices.size(); l++) {
                     int row = indices[l];
-                    num lambda = DIVIDE(VEC_AT(remainder[row], 0), VEC_AT(remainder[i], 0));
+                    num lambda = SDIV(VEC_AT(remainder[row], 0), VEC_AT(remainder[i], 0));
                     SWITCH_NUM_SIGN(lambda);
-                    ADD(remainder[row], lambda, remainder[i]);
+                    ADD(remainder[row], 1, lambda, remainder[i], 1);
                     if (GET_NUM_POS(VEC_AT(remainder[row], 0)) == GET_NUM_POS(VEC_AT(remainder[i], 0))) next_indices[occ++] = row;
                 }
                 indices = next_indices;
@@ -305,8 +307,10 @@ std::map<num, unsigned int, NUM_COMPARATOR> smith(stream<s_vec>& matrix) {
                 } else col = false;
             } else {
                 temp = remainder[i];
+                PREPARE_NUM_SVOBODA(VEC_AT(temp, 0));
+                // TODO: Precompute dividend for temp[0] to divide more efficiently
                 for (int l = 1; l < GET_VEC_OCC(temp); l++) {
-                    MOD(VEC_AT(temp, l), VEC_AT(temp, 0));
+                    SMOD(VEC_AT(temp, l), VEC_AT(temp, 0));
                     if (GET_NUM_OCC(VEC_AT(temp, l)) == 0) {
                         DEL_POS(temp, l);
                         l--;

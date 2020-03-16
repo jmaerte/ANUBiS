@@ -19,7 +19,7 @@ IF(USE_SUPERBUILD)
     RETURN()
 ELSE()
     PROJECT(ANUBiS
-            LANGUAGES CXX C
+            LANGUAGES CXX
             VERSION 0.1)
     MESSAGE(STATUS "Building ANUBiS with CMake Args ${CMAKE_ARGS}")
 ENDIF()

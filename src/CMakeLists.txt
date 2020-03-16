@@ -27,5 +27,7 @@ ADD_DEFINITIONS(-DBOOST_THREAD_VERSION=4
                 -DBOOST_THREAD_DONT_PROVIDE_FUTURE)
 REMOVE_DEFINITIONS(-DBOOST_NO_EXCEPTIONS)
 
+add_subdirectory(arithmetic)
+add_subdirectory(arithmetic_exe)
 add_subdirectory(anubis)
 add_subdirectory(exe)

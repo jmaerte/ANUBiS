@@ -7,8 +7,7 @@ set(${LIBRARY_TARGET_NAME}_SRC
 		src/data_types/potence/potence.cpp)
 
 set(${LIBRARY_TARGET_NAME}_PUBLIC_HDR
-		include/ANUBiS/complex.hpp
-		include/ANUBiS/arithmetic.hpp)
+		include/ANUBiS/complex.hpp)
 
 set(${LIBRARY_TARGET_NAME}_PRIVATE_HDR
 		src/calc/computation.hpp
@@ -42,7 +41,7 @@ target_include_directories(${LIBRARY_TARGET_NAME} PUBLIC "$<BUILD_INTERFACE:${CM
 														 "$<BUILD_INTERFACE:${generated_headers}>")
 target_include_directories(${LIBRARY_TARGET_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>")
 
-target_link_libraries (${LIBRARY_TARGET_NAME} ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries (${LIBRARY_TARGET_NAME} ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME}::ARITHMETIC)
 
 IF(WIN32)
 	target_link_libraries(${LIBRARY_TARGET_NAME} winpthread)

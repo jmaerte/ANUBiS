@@ -13,7 +13,7 @@
 #include <unordered_map>
 #include "multi_thread/rw_mutex.hpp"
 #include "data_types/lin/sparse.hpp"
-#include "arithmetic.hpp"
+#include <arithmetic/typedef.hpp>
 #include <ANUBIS_EXPORT.h>
 
 template<class T>

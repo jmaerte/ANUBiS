@@ -1,0 +1,17 @@
+set(EXE_TARGET_NAME ARITHMETIC_exe)
+
+set(${EXE_TARGET_NAME}_SRC
+        main.cpp)
+
+add_executable(${EXE_TARGET_NAME} ${${EXE_TARGET_NAME}_SRC})
+
+if (ARCHITECTURE STREQUAL "32")
+    set_target_properties(${EXE_TARGET_NAME} PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
+endif()
+
+target_include_directories(${EXE_TARGET_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+        "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>")
+
+target_link_libraries (${EXE_TARGET_NAME} ANUBiS::ARITHMETIC)
+
+install(TARGETS ${EXE_TARGET_NAME} DESTINATION bin)

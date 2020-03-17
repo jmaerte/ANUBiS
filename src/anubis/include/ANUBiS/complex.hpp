@@ -19,6 +19,8 @@
 template<class T>
 class stream;
 
+using namespace jmaerte::arith;
+
 namespace jmaerte {
     namespace anubis {
 
@@ -34,7 +36,7 @@ namespace jmaerte {
         private:
 
             virtual stream<sparse<double>> laplacian(int i) = 0;
-            virtual stream<s_vec> boundary(int dim) = 0;
+            virtual stream<vec::s_vec> boundary(int dim) = 0;
 
         protected:
 
@@ -51,7 +53,7 @@ namespace jmaerte {
 
             virtual void facet_insert(const std::vector<unsigned int> *) = 0;
             std::vector<double> laplacian_spectrum(int i);
-            virtual std::map<num, unsigned int, NUM_COMPARATOR> homology(int dim) = 0;
+            virtual std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> homology(int dim) = 0;
 
             std::vector<int> f_vector();
         };
@@ -64,7 +66,7 @@ namespace jmaerte {
             std::mutex facet_mutex;
             std::vector<std::vector<unsigned int>> facets;
             std::map<unsigned int, unsigned int *> past;
-            std::map<unsigned int, std::map<num, unsigned int, NUM_COMPARATOR>> smith_forms;
+            std::map<unsigned int, std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR>> smith_forms;
             int vertices;
 
             stream<sparse<double>> laplacian(int i) override;
@@ -72,7 +74,7 @@ namespace jmaerte {
             std::pair<int, int> bit_position(int pos);
             int get_simplex_size();
 
-            stream<s_vec> boundary(int dim) override;
+            stream<vec::s_vec> boundary(int dim) override;
 
             s_list(std::string name, int sceleton): complex(name, sceleton), smith_forms() {}
 
@@ -88,7 +90,7 @@ namespace jmaerte {
             unsigned int * generate(unsigned int dim);
             bool calculated(unsigned int dim);
 
-            std::map<num, unsigned int, NUM_COMPARATOR> homology(int dim) override;
+            std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> homology(int dim) override;
 
             static s_list* from_file(
                     const std::string &,
@@ -126,7 +128,7 @@ namespace jmaerte {
                 return n;
             }
 
-            stream<s_vec> boundary(int dim) override;
+            stream<vec::s_vec> boundary(int dim) override;
 
             s_tree(std::string name, int sceleton = -1);
 
@@ -145,7 +147,7 @@ namespace jmaerte {
 
             void facet_insert(const std::vector<unsigned int> *) override;
             void print();
-            std::map<num, unsigned int, NUM_COMPARATOR> homology(int i) override;
+            std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> homology(int i) override;
 
             static s_tree * from_file(
                     const std::string &,

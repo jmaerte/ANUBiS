@@ -183,11 +183,11 @@ void add (sparse<int>& a, int lambda, sparse<int>& b) {
 /***********************************************************************************************************************
  * Smith normalform
  **********************************************************************************************************************/
-std::map<num, unsigned int, NUM_COMPARATOR> smith(stream<s_vec>&& matrix) {
-    return smith(std::forward<stream<s_vec>>(matrix));
+std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> smith(stream<vec::s_vec>&& matrix) {
+    return smith(std::forward<stream<vec::s_vec>>(matrix));
 }
 
-std::map<num, unsigned int, NUM_COMPARATOR> smith(stream<s_vec>& matrix) {
+std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> smith(stream<vec::s_vec>& matrix) {
     //    std::cout << "hom" << std::endl;
 //    ULL* a = new unsigned long long;
 //    *a = ((1ULL << 31) + (1ULL << 32));
@@ -201,64 +201,67 @@ std::map<num, unsigned int, NUM_COMPARATOR> smith(stream<s_vec>& matrix) {
 //    delete a;
 //    delete b;
 //    delete[] c;
-    std::vector<s_vec> remainder;
-    std::map<num, unsigned int, NUM_COMPARATOR> result;
+
+    using namespace jmaerte::arith;
+
+    std::vector<vec::s_vec> remainder;
+    std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> result;
     {
-        std::vector<s_vec> trivial;
+        std::vector<vec::s_vec> trivial;
         std::vector<int> first;
         int count = 0;
         while (!matrix.is_empty()) {
-            s_vec vec = matrix.get();
+            vec::s_vec vec = matrix.get();
             matrix = matrix.pop_front();
             int k = 0;
             int pos = 0;
-            for (int i = 0; i < GET_VEC_OCC(vec);) {
-                pos = GET_NUM_POS(VEC_AT(vec, i));
-                std::cout << GET_VEC_OCC(vec) << std::endl;
+            for (int i = 0; i < vec::GET_OCC(vec);) {
+                pos = num::GET_POS(vec::AT(vec, i));
+                std::cout << vec::GET_OCC(vec) << std::endl;
                 k = binary_search(first, pos, k, first.size(), compare_ints);
                 if (k < first.size() && first[k] == pos) {
-                    ADD(vec, 0, VEC_AT(vec, i), trivial[k], 0);
+                    vec::ADD(vec, 0, vec::AT(vec, i), trivial[k], 0);
                 } else i++;
             }
-            if (!GET_VEC_OCC(vec)) {
-                DEL_VEC(vec);
+            if (!vec::GET_OCC(vec)) {
+                vec::DELETE(vec);
                 continue;
             }
-            if (GET_NUM_OCC(VEC_AT(vec, 0)) == 1 && *((vec + 2)->value) == 1ULL) {
+            if (num::GET_OCC(vec::AT(vec, 0)) == 1 && *((vec + 2)->value) == 1ULL) {
                 // assert that the leading entry is -1.
-                if (!GET_NUM_SIGN(VEC_AT(vec, 0))) SWITCH_VEC_SIGN(vec);
-                pos = GET_NUM_POS(VEC_AT(vec, 0));
+                if (!num::GET_SIGN(vec::AT(vec, 0))) vec::SWITCH_SIGNS(vec);
+                pos = num::GET_POS(vec::AT(vec, 0));
                 k = binary_search(first, pos, 0, first.size(), compare_ints);
                 trivial.insert(trivial.begin() + k, vec);
                 first.insert(first.begin() + k, pos);
-                for (s_vec& v : remainder) {
-                    int j = VEC_FIND_POS(v, pos);
-                    if (j < GET_VEC_OCC(v) && GET_NUM_POS(VEC_AT(v, j)) == pos) {
-                        ADD(v, 0, VEC_AT(v, j), vec, 0);
+                for (vec::s_vec& v : remainder) {
+                    int j = vec::FIND_POS(v, pos);
+                    if (j < vec::GET_OCC(v) && num::GET_POS(vec::AT(v, j)) == pos) {
+                        vec::ADD(v, 0, vec::AT(v, j), vec, 0);
                     }
                 }
             } else {
                 remainder.push_back(vec);
             }
         }
-        result.emplace(NEW_NUM(1, false, 1ULL), first.size());
+        result.emplace(num::NEW(1, false, 1ULL), first.size());
     }
 
     int n = remainder.size();// amount of non-trivial vectors in remainder.
     for (int i = 0; i < n; i++) {
         if (i % 100 == 0) std::cout << "\rCalculating Smith Normalform " << i << " / " << remainder.size();
         int j = -1;
-        s_vec temp;
+        vec::s_vec temp;
         std::vector<int> indices;
         int pos = 0;
         for (int row = i; row < n; row++) {
             temp = remainder[row];
-            if (GET_VEC_OCC(temp) == 0) {
+            if (vec::GET_OCC(temp) == 0) {
                 remainder[row] = remainder[--n];
                 remainder[n] = temp;
-                DEL_VEC(temp);
+                vec::DELETE(temp);
             } else {
-                pos = GET_NUM_POS(VEC_AT(temp, 0));
+                pos = num::GET_POS(vec::AT(temp, 0));
                 if (pos < j || j < 0) {
                     indices.clear();
                     indices.push_back(row);
@@ -278,7 +281,7 @@ std::map<num, unsigned int, NUM_COMPARATOR> smith(stream<s_vec>& matrix) {
                 int h = 0; // index in indices where the pivot lays
                 for (int l = 0; l < indices.size(); l++) {
                     int row = indices[l];
-                    if (k < 0 || COMPARE_ABS(VEC_AT(temp, 0), VEC_AT(remainder[row], 0)) > 0) {
+                    if (k < 0 || num::COMPARE_ABS(vec::AT(temp, 0), vec::AT(remainder[row], 0)) > 0) {
                         temp = remainder[row];
                         k = row;
                         h = l;
@@ -293,50 +296,50 @@ std::map<num, unsigned int, NUM_COMPARATOR> smith(stream<s_vec>& matrix) {
                 next_indices.reserve(indices.size() - 1);
                 int occ = 0;
                 // TODO: Precompute dividend for remainder[i][0] to divide more efficiently
-                num pre = PREPARE_NUM_SVOBODA(VEC_AT(remainder[i], 0));
+                num::ap_int pre = num::PREPARE_NUM_SVOBODA(vec::AT(remainder[i], 0));
                 for (int l = 0; l < indices.size(); l++) {
                     int row = indices[l];
-                    num lambda = SDIV(VEC_AT(remainder[row], 0), VEC_AT(remainder[i], 0), pre);
-                    SWITCH_NUM_SIGN(lambda);
-                    ADD(remainder[row], 1, lambda, remainder[i], 1);
-                    if (GET_NUM_POS(VEC_AT(remainder[row], 0)) == GET_NUM_POS(VEC_AT(remainder[i], 0))) next_indices[occ++] = row;
+                    num::ap_int lambda = num::SDIV(vec::AT(remainder[row], 0), vec::AT(remainder[i], 0), pre);
+                    num::SWITCH_SIGN(lambda);
+                    vec::ADD(remainder[row], 1, lambda, remainder[i], 1);
+                    if (num::GET_POS(vec::AT(remainder[row], 0)) == num::GET_POS(vec::AT(remainder[i], 0))) next_indices[occ++] = row;
                 }
                 indices = next_indices;
                 if (next_indices.size() > 0) {
-                    if (GET_VEC_OCC(remainder[i]) > 0) indices.push_back(i);
+                    if (vec::GET_OCC(remainder[i]) > 0) indices.push_back(i);
                     col = true;
                 } else col = false;
             } else {
                 temp = remainder[i];
-                num pre = PREPARE_SMOD_DIVISOR(VEC_AT(temp, 0), VEC_AT(temp, 1), GET_VEC_OCC(temp) - 1);
+                num::ap_int pre = num::PREPARE_SMOD_DIVISOR(vec::AT(temp, 0), vec::AT(temp, 1), vec::GET_OCC(temp) - 1);
                 // TODO: Precompute dividend for temp[0] to divide more efficiently
-                for (int l = 1; l < GET_VEC_OCC(temp); l++) {
-                    SMOD(VEC_AT(temp, l), VEC_AT(temp, 0), pre);
-                    if (GET_NUM_OCC(VEC_AT(temp, l)) == 0) {
-                        DEL_POS(temp, l);
+                for (int l = 1; l < vec::GET_OCC(temp); l++) {
+                    num::SMOD(vec::AT(temp, l), vec::AT(temp, 0), pre);
+                    if (num::GET_OCC(vec::AT(temp, l)) == 0) {
+                        vec::DELETE_POS(temp, l);
                         l--;
                     }
                 }
-                if (GET_VEC_OCC(temp) == 1) {
-                    auto it = result.find(VEC_AT(temp, 0));
+                if (vec::GET_OCC(temp) == 1) {
+                    auto it = result.find(vec::AT(temp, 0));
                     if (it == result.end()) {
-                        result.emplace(COPY_NUM(VEC_AT(temp, 0)), 1u);
+                        result.emplace(num::COPY(vec::AT(temp, 0)), 1u);
                     }
                     else (*it).second = (*it).second + 1u;
-                    DEL_VEC(temp);
+                    vec::DELETE(temp);
                     break;
                 } else {
                     int k = -1;
-                    for (int row = 0; row < GET_VEC_OCC(remainder[i]); row++) {
-                        if (k < 0 || COMPARE_ABS(VEC_AT(remainder[i], k), VEC_AT(remainder[i], row)) > 0) k = i;
+                    for (int row = 0; row < vec::GET_OCC(remainder[i]); row++) {
+                        if (k < 0 || num::COMPARE_ABS(vec::AT(remainder[i], k), vec::AT(remainder[i], row)) > 0) k = i;
                     }
-                    VEC_SWAP_VALUES(remainder[i], 0, k);
+                    vec::SWAP_VALUES(remainder[i], 0, k);
                     for(int row = i + 1; row < n; row++) {
-                        int l = VEC_FIND_POS(remainder[row], GET_NUM_POS(VEC_AT(remainder[i], k)));
-                        if (l < GET_VEC_OCC(remainder[row]) && GET_NUM_POS(VEC_AT(remainder[row], l)) == GET_NUM_POS(VEC_AT(remainder[row], k))) {
-                            SET_NUM_POS(VEC_AT(remainder[row], l), GET_NUM_POS(VEC_AT(remainder[i], 0)));
-                            VEC_PUT(remainder[row], VEC_AT(remainder[row], l));
-                            DEL_POS(remainder[row], l + 1);
+                        int l = vec::FIND_POS(remainder[row], num::GET_POS(vec::AT(remainder[i], k)));
+                        if (l < vec::GET_OCC(remainder[row]) && num::GET_POS(vec::AT(remainder[row], l)) == num::GET_POS(vec::AT(remainder[row], k))) {
+                            num::SET_POS(vec::AT(remainder[row], l), num::GET_POS(vec::AT(remainder[i], 0)));
+                            vec::PUT(remainder[row], vec::AT(remainder[row], l));
+                            vec::DELETE_POS(remainder[row], l + 1);
                             indices.push_back(row);
                         }
                     }

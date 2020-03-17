@@ -11,133 +11,172 @@
 #include <iostream>
 #include <ARITHMETIC_EXPORT.h>
 
+// TEMP - BELONGS TO arithmetic.hpp
+namespace jmaerte {
+    namespace arith {
+        namespace num {
+            namespace aux {
+                void ADD(ap_int a, ULL lambda, int shift, ap_int const b);
+                void SUB(ap_int a, ULL lambda, int shift, ap_int const b);
+            }
+        }
+    }
+}
+
+namespace jmaerte {
+    namespace arith {
 /***********************************************************************************************************************
  * NUM
  **********************************************************************************************************************/
 
-// INLINE
-void ADD_NUM(num a, ULL lambda, int shift, num const b);
-void SUB_NUM(num a, ULL lambda, int shift, num const b);
+        namespace num {
 
-ARITHMETIC_EXPORT int GET_NUM_POS(num const n);
-ARITHMETIC_EXPORT int GET_NUM_OCC(num const n);
-ARITHMETIC_EXPORT int GET_NUM_MEMSIZE(num const n);
-ARITHMETIC_EXPORT ULL* GET_ABS_DATA(num const n);
-ARITHMETIC_EXPORT bool GET_NUM_SIGN(num const n);
-ARITHMETIC_EXPORT int GET_NUM_SIZE(num const n);
+            // INLINE
 
-ARITHMETIC_EXPORT void SET_NUM_POS(num n, int pos);
-ARITHMETIC_EXPORT void SET_NUM_SIZE(num n, int size);
-ARITHMETIC_EXPORT void SET_NUM_OCC(num n, int occ);
-ARITHMETIC_EXPORT void SET_NUM_SIGN(num n, bool sign);
-ARITHMETIC_EXPORT void SWITCH_NUM_SIGN(num n);
-ARITHMETIC_EXPORT void SET_NUM(num a, num const& b);
+            ARITHMETIC_EXPORT int   GET_POS(ap_int const n);
+            ARITHMETIC_EXPORT int   GET_OCC(ap_int const n);
+            ARITHMETIC_EXPORT int   GET_MEMSIZE(ap_int const n);
+            ARITHMETIC_EXPORT ULL*  GET_ABS_DATA(ap_int const n);
+            ARITHMETIC_EXPORT bool  GET_SIGN(ap_int const n);
+            ARITHMETIC_EXPORT int   GET_SIZE(ap_int const n);
 
-ARITHMETIC_EXPORT void ENLARGE_NUM(num& n, int size);
-ARITHMETIC_EXPORT void ENLARGE_NUM(num& n);
+            ARITHMETIC_EXPORT void  SET_POS(ap_int n, int pos);
+            ARITHMETIC_EXPORT void  SET_SIZE(ap_int n, int size);
+            ARITHMETIC_EXPORT void  SET_OCC(ap_int n, int occ);
+            ARITHMETIC_EXPORT void  SET_SIGN(ap_int n, bool sign);
+            ARITHMETIC_EXPORT void  SWITCH_SIGN(ap_int n);
+            ARITHMETIC_EXPORT void  ASSIGN(ap_int a, ap_int const& b);
 
-// NOT INLINE
+            ARITHMETIC_EXPORT void  ENLARGE(ap_int& n, int size);
+            ARITHMETIC_EXPORT void  ENLARGE(ap_int& n);
 
-ARITHMETIC_EXPORT num PREPARE_SMOD_DIVISOR(num divisor, num denominators, int arr_size);
-ARITHMETIC_EXPORT num PREPARE_NUM_SVOBODA(num const n);
+            // NOT INLINE
+
+            ARITHMETIC_EXPORT ap_int   PREPARE_SMOD_DIVISOR(ap_int divisor, ap_int denominators, int arr_size);
+            ARITHMETIC_EXPORT ap_int   PREPARE_NUM_SVOBODA(ap_int const n);
+        }
 
 /***********************************************************************************************************************
  * NUM - COMPARATORS
  **********************************************************************************************************************/
 
-// NOT INLINE
+        namespace num {
 
-ARITHMETIC_EXPORT int COMPARE_ABS(num const n_a, num const n_b);
+            // NOT INLINE
+
+            ARITHMETIC_EXPORT int COMPARE_ABS(ap_int const n_a, ap_int const n_b);
+        }
 
 /***********************************************************************************************************************
  * NUM - (DE)ALLOCATION
  **********************************************************************************************************************/
 
-// INLINE
+        namespace num {
 
-ARITHMETIC_EXPORT num NEW_NUM(ULL initial_size, bool sign, ULL value);
-ARITHMETIC_EXPORT num NEW_NUM(ULL* value, int size, int occ, bool sign);
-ARITHMETIC_EXPORT num COPY_NUM(num const n);
-ARITHMETIC_EXPORT void DEL_NUM_DATA(num i);
-ARITHMETIC_EXPORT void DEL_NUM(num i);
+            // INLINE
+
+            ARITHMETIC_EXPORT ap_int   NEW(ULL initial_size, bool sign, ULL value);
+            ARITHMETIC_EXPORT ap_int   NEW(ULL* value, int size, int occ, bool sign);
+            ARITHMETIC_EXPORT ap_int   COPY(ap_int const n);
+            ARITHMETIC_EXPORT void  DELETE_DATA(ap_int i);
+            ARITHMETIC_EXPORT void  DELETE(ap_int i);
+        }
 
 /***********************************************************************************************************************
  * NUM - ARITHMETIC
  **********************************************************************************************************************/
 
-// NOT INLINE
+        namespace num {
 
-/**
- * Returns lambda * b.
- * @param result
- * @param lambda
- * @param b
- */
-ARITHMETIC_EXPORT num MUL(const num& lambda, const num& b);
+            // NOT INLINE
 
-ARITHMETIC_EXPORT bool ADD_NUM(num& a, num const& b);
+            /**
+             * Returns lambda * b.
+             * @param result
+             * @param lambda
+             * @param b
+             */
+            ARITHMETIC_EXPORT ap_int   MUL(const ap_int& lambda, const ap_int& b);
 
-/**
- * Sets b to be b % a.
- * @param a Divisor
- * @param b Dividend
- */
-ARITHMETIC_EXPORT void SMOD(num a, num const b, num const pre);
+            ARITHMETIC_EXPORT bool  ADD(ap_int& a, ap_int const& b);
 
-/**
- * SVOBODA
- * @param a
- * @param b
- * @return
- */
-ARITHMETIC_EXPORT num SDIV(num const a, num const b, num const pre);
+            /**
+             * Sets b to be b % a.
+             * @param a Divisor
+             * @param b Dividend
+             */
+            ARITHMETIC_EXPORT void  SMOD(ap_int a, ap_int const b, ap_int const pre);
+
+            /**
+             * SVOBODA
+             * @param a
+             * @param b
+             * @return
+             */
+            ARITHMETIC_EXPORT ap_int   SDIV(ap_int const a, ap_int const b, ap_int const pre);
+        }
 
 /***********************************************************************************************************************
  * VECTOR
  **********************************************************************************************************************/
 
-// INLINE
+        namespace vec {
 
-ARITHMETIC_EXPORT int GET_VEC_SIZE(s_vec const v);
-ARITHMETIC_EXPORT int GET_VEC_OCC(s_vec const v);
-ARITHMETIC_EXPORT void SET_VEC_OCC(s_vec v, int occ);
-ARITHMETIC_EXPORT num VEC_AT(s_vec const v, const int i);
-ARITHMETIC_EXPORT void ENLARGE_VEC(s_vec& v, int size);
-ARITHMETIC_EXPORT void ENLARGE_VEC(s_vec& v);
-ARITHMETIC_EXPORT void SWITCH_VEC_SIGN(s_vec v);
-ARITHMETIC_EXPORT void VEC_SWAP_VALUES(s_vec& v, int i, int j);
-ARITHMETIC_EXPORT void VEC_SET(s_vec v, int k, num const& n);
+            // INLINE
 
-// NOT INLINE
+            ARITHMETIC_EXPORT int   GET_SIZE(s_vec const v);
+            ARITHMETIC_EXPORT int   GET_OCC(s_vec const v);
 
-ARITHMETIC_EXPORT int VEC_FIND_POS(s_vec const& v, int pos);
-ARITHMETIC_EXPORT void VEC_PUT(s_vec v, num const& n);
+            ARITHMETIC_EXPORT void  SET_OCC(s_vec v, int occ);
+
+            ARITHMETIC_EXPORT num::ap_int   AT(s_vec const v, const int i);
+            ARITHMETIC_EXPORT void  SET(s_vec v, int k, num::ap_int const& n);
+
+            ARITHMETIC_EXPORT void  SWITCH_SIGNS(s_vec v);
+            ARITHMETIC_EXPORT void  SWAP_VALUES(s_vec& v, int i, int j);
+
+            ARITHMETIC_EXPORT void  ENLARGE(s_vec& v, int size);
+            ARITHMETIC_EXPORT void  ENLARGE(s_vec& v);
+
+            // NOT INLINE
+
+            ARITHMETIC_EXPORT int FIND_POS(s_vec const& v, int pos);
+            ARITHMETIC_EXPORT void PUT(s_vec v, num::ap_int const& n);
+        }
 
 /***********************************************************************************************************************
  * VECTOR - (DE)ALLOCATION
  **********************************************************************************************************************/
 
-// INLINE
+        namespace vec {
 
-ARITHMETIC_EXPORT s_vec NEW_VEC(std::vector<std::pair<ULL, std::pair<bool, ULL>>> vector);
-ARITHMETIC_EXPORT void DEL_VEC(s_vec& v);
-ARITHMETIC_EXPORT void DEL_POS(s_vec& v, int i);
+            // INLINE
+
+            ARITHMETIC_EXPORT s_vec NEW(std::vector<std::pair<ULL, std::pair<bool, ULL>>> vector);
+            ARITHMETIC_EXPORT void DELETE(s_vec& v);
+            ARITHMETIC_EXPORT void DELETE_POS(s_vec& v, int i);
+        }
 
 /***********************************************************************************************************************
  * VECTOR - ARITHMETIC
  **********************************************************************************************************************/
 
-// NOT INLINE
+        namespace vec {
 
-/** Adds lambda * b to a.
- *
- * @param a destination sparse_vector
- * @param lambda coefficient
- * @param size_lambda number of ULLs needed to represent lambda
- * @param b addend
- */
-ARITHMETIC_EXPORT void ADD(s_vec& a, int start_a, const num& lambda, const s_vec& b, int start_b);
-ARITHMETIC_EXPORT void MUL_VEC(s_vec v, num const n);
+            // NOT INLINE
+
+            /** Adds lambda * b to a.
+             *
+             * @param a destination sparse_vector
+             * @param lambda coefficient
+             * @param size_lambda number of ULLs needed to represent lambda
+             * @param b addend
+             */
+            ARITHMETIC_EXPORT void  ADD(s_vec& a, int start_a, const num::ap_int& lambda, const s_vec& b, int start_b);
+            ARITHMETIC_EXPORT void  MUL(s_vec v, num::ap_int const n);
+        }
+    }
+}
 
 
 #include "../../src/arithmetic.hpp"

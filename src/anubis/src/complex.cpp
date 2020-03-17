@@ -10,6 +10,8 @@
 #include "multi_thread/thread_pool.hpp"
 #include <boost/regex.hpp>
 
+using namespace jmaerte::arith;
+
 static const char LogTable256[256] = {
     #define LT(n) n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n
                 -1, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -342,7 +344,7 @@ namespace jmaerte {
             clear_map();
         }
 
-        stream<s_vec> s_list::boundary(int dim) {
+        stream<vec::s_vec> s_list::boundary(int dim) {
             assert(0 <= dim && dim < f.size());
             if(f[dim] == 0) generate(dim);
             if (dim > 0) {
@@ -350,7 +352,7 @@ namespace jmaerte {
             }
             int SIMPLEX_SIZE = get_simplex_size();
             return dim == 0 ? transform(ints_from(0).take(f[dim]), [this](int i) {
-                return NEW_VEC({
+                return vec::NEW({
                     {0ULL, {false, 1ULL}}
                 }); // reduced boundary
             }) : transform(ints_from(0).take(f[dim]), [this, dim, SIMPLEX_SIZE](int i) {
@@ -373,7 +375,7 @@ namespace jmaerte {
                     };
                     simplex[curr_index] = temp;
                 }
-                return NEW_VEC(vec);
+                return vec::NEW(vec);
             });
         }
 
@@ -381,7 +383,7 @@ namespace jmaerte {
             return vertices / UINT_SIZE + (vertices % UINT_SIZE == 0 ? 0 : 1);
         }
 
-        std::map<num, unsigned int, NUM_COMPARATOR> s_list::homology(int dim) {
+        std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> s_list::homology(int dim) {
             auto it_dim = smith_forms.find(dim);
             if (it_dim == smith_forms.end()) {
                 smith_forms.emplace(dim, smith(boundary(dim)));
@@ -405,13 +407,13 @@ namespace jmaerte {
                 }
                 kernel_rank -= rank_low;
             }
-            std::map<num, unsigned int, NUM_COMPARATOR> result {};
+            std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> result {};
             unsigned int rank = kernel_rank;
             for (auto kv : d_map) {
-                if (!(GET_NUM_OCC(kv.first) == 1 && GET_ABS_DATA(kv.first)[0] == 1ULL)) result.emplace(kv.first, kv.second);
+                if (!(num::GET_OCC(kv.first) == 1 && num::GET_ABS_DATA(kv.first)[0] == 1ULL)) result.emplace(kv.first, kv.second);
                 rank -= kv.second;
             }
-            result.emplace(NEW_NUM(1, false, 0ULL), rank);
+            result.emplace(num::NEW(1, false, 0ULL), rank);
         }
 
         /***************************************************************************************************************
@@ -509,12 +511,12 @@ namespace jmaerte {
             }, facets, name, sceleton);
         }
 
-        stream<s_vec> s_tree::boundary(int dim) {
-            return stream<s_vec>();
+        stream<vec::s_vec> s_tree::boundary(int dim) {
+            return stream<vec::s_vec>();
         }
 
-        std::map<num, unsigned int, NUM_COMPARATOR> s_tree::homology(int i) {
-            return std::map<num, unsigned int, NUM_COMPARATOR>();
+        std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> s_tree::homology(int i) {
+            return std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR>();
         }
 
         /***********************************************************************************************************

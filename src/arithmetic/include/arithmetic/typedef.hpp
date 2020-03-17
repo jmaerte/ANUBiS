@@ -35,7 +35,13 @@ union svec_node {
  * and value points to an array of size @code{size}-many ULLs, where the first @code{occ} 32-bit block elements
  * are a word of the expansion of the number in base 2^32.
  */
-typedef svec_node* num;
+namespace jmaerte {
+    namespace arith {
+        namespace num {
+            typedef svec_node *ap_int;
+        }
+    }
+}
 
 /**
  * A sparse vector is an array of svec_nodes of length 2*n + 1. n is thereby the number of non-zero elements that
@@ -53,14 +59,28 @@ typedef svec_node* num;
  * +------+-----+.
  *
  */
-typedef svec_node* s_vec;
+namespace jmaerte {
+    namespace arith {
+        namespace vec {
+            typedef svec_node* s_vec;
+        }
+    }
+}
 
-struct ARITHMETIC_EXPORT NUM_COMPARATOR {
-        bool operator()(num const& a, num const& b) const;
-};
+namespace jmaerte {
+    namespace arith {
+        namespace num {
+            namespace comp {
+                struct ARITHMETIC_EXPORT SIGNED_COMPARATOR {
+                        bool operator()(ap_int const& a, ap_int const& b) const;
+                };
 
-struct ARITHMETIC_EXPORT NUM_ABS_COMPARATOR {
-        bool operator()(num const& a, num const& b) const;
-};
+                struct ARITHMETIC_EXPORT UNSIGNED_COMPARATOR {
+                        bool operator()(ap_int const& a, ap_int const& b) const;
+                };
+            }
+        }
+    }
+}
 
 #endif //ANUBIS_SUPERBUILD_TYPEDEF_HPP

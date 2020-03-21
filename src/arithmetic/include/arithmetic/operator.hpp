@@ -35,7 +35,6 @@ namespace jmaerte {
 
             ARITHMETIC_EXPORT int   GET_POS(ap_int const n);
             ARITHMETIC_EXPORT int   GET_OCC(ap_int const n);
-            ARITHMETIC_EXPORT int   GET_MEMSIZE(ap_int const n);
             ARITHMETIC_EXPORT ULL*  GET_ABS_DATA(ap_int const n);
             ARITHMETIC_EXPORT bool  GET_SIGN(ap_int const n);
             ARITHMETIC_EXPORT int   GET_SIZE(ap_int const n);
@@ -46,14 +45,20 @@ namespace jmaerte {
             ARITHMETIC_EXPORT void  SET_SIGN(ap_int n, bool sign);
             ARITHMETIC_EXPORT void  SWITCH_SIGN(ap_int n);
             ARITHMETIC_EXPORT void  ASSIGN(ap_int a, ap_int const& b);
+            ARITHMETIC_EXPORT void  OVERWRITE(ap_int a, ap_int const& b);
 
             ARITHMETIC_EXPORT void  ENLARGE(ap_int& n, int size);
             ARITHMETIC_EXPORT void  ENLARGE(ap_int& n);
 
+            ARITHMETIC_EXPORT void  RSHIFT(ap_int& n, int shift);
+            ARITHMETIC_EXPORT void  LSHIFT(ap_int& n, int shift);
+            ARITHMETIC_EXPORT void  LSHIFT_BLOCK(ap_int& n, int blocks)
+
+            ARITHMETIC_EXPORT void  MOD(ap_int a, ap_int b, ap_int R_SQ, ULL inv);
+
             // NOT INLINE
 
-            ARITHMETIC_EXPORT ap_int   PREPARE_SMOD_DIVISOR(ap_int divisor, ap_int denominators, int arr_size);
-            ARITHMETIC_EXPORT ap_int   PREPARE_NUM_SVOBODA(ap_int const n);
+            ARITHMETIC_EXPORT ap_int SDIV(ap_int const a, ap_int const b, ap_int const pre);
         }
 
 /***********************************************************************************************************************
@@ -80,6 +85,8 @@ namespace jmaerte {
             ARITHMETIC_EXPORT ap_int   COPY(ap_int const n);
             ARITHMETIC_EXPORT void  DELETE_DATA(ap_int i);
             ARITHMETIC_EXPORT void  DELETE(ap_int i);
+
+            ARITHMETIC_EXPORT ap_int operator""ap_int(unsigned long long n);
         }
 
 /***********************************************************************************************************************
@@ -96,7 +103,11 @@ namespace jmaerte {
              * @param lambda
              * @param b
              */
-            ARITHMETIC_EXPORT ap_int   MUL(const ap_int& lambda, const ap_int& b);
+            ARITHMETIC_EXPORT ap_int   iMUL(const ap_int& lambda, const ap_int& b);
+            ARITHMETIC_EXPORT void      MUL(ap_int a, ap_int b);
+            ARITHMETIC_EXPORT ap_int   iMULL(ap_int a, ap_int b, int n);
+            ARITHMETIC_EXPORT void      MULL(ap_int a, ap_int b, int n);
+            ARITHMETIC_EXPORT void      SQR(ap_int a);
 
             ARITHMETIC_EXPORT bool  ADD(ap_int& a, ap_int const& b);
 
@@ -114,6 +125,8 @@ namespace jmaerte {
              * @return
              */
             ARITHMETIC_EXPORT ap_int   SDIV(ap_int const a, ap_int const b, ap_int const pre);
+
+            ARITHMETIC_EXPORT void  BATCH_SMOD(vec::s_vec vec);
         }
 
 /***********************************************************************************************************************

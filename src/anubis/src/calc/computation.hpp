@@ -205,6 +205,7 @@ std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> smith(stream<v
     using namespace jmaerte::arith;
 
     std::vector<vec::s_vec> remainder;
+    std::vector<int> first_remainder;
     std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> result;
     {
         std::vector<vec::s_vec> trivial;
@@ -241,7 +242,10 @@ std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> smith(stream<v
                     }
                 }
             } else {
-                remainder.push_back(vec);
+                pos = num::GET_POS(vec::AT(vec, 0));
+                k = binary_search(first_remainder, pos, 0, first_remainder.size(), compare_ints);
+                remainder.insert(remainder.begin() + k, vec);
+                first_remainder.insert(first_remainder.begin() + k, pos);
             }
         }
         result.emplace(num::NEW(1, false, 1ULL), first.size());
@@ -250,76 +254,82 @@ std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> smith(stream<v
     int n = remainder.size();// amount of non-trivial vectors in remainder.
     for (int i = 0; i < n; i++) {
         if (i % 100 == 0) std::cout << "\rCalculating Smith Normalform " << i << " / " << remainder.size();
-        int j = -1;
+//        int j = -1;
         vec::s_vec temp;
-        std::vector<int> indices;
-        int pos = 0;
-        for (int row = i; row < n; row++) {
-            temp = remainder[row];
-            if (vec::GET_OCC(temp) == 0) {
-                remainder[row] = remainder[--n];
-                remainder[n] = temp;
-                vec::DELETE(temp);
-            } else {
-                pos = num::GET_POS(vec::AT(temp, 0));
-                if (pos < j || j < 0) {
-                    indices.clear();
-                    indices.push_back(row);
-                    j = pos;
-                } else if (pos == j) {
-                    indices.push_back(row);
-                }
-            }
+//        std::vector<int> indices;
+//        int pos = 0;
+//        for (int row = i; row < n; row++) {
+//            temp = remainder[row];
+//            if (vec::GET_OCC(temp) == 0) {
+//                remainder[row] = remainder[--n];
+//                remainder[n] = temp;
+//                vec::DELETE(temp);
+//            } else {
+//                pos = num::GET_POS(vec::AT(temp, 0));
+//                if (pos < j || j < 0) {
+//                    indices.clear();
+//                    indices.push_back(row);
+//                    j = pos;
+//                } else if (pos == j) {
+//                    indices.push_back(row);
+//                }
+//            }
+//        }
+        if (first_remainder.size() == 0) break;
+        int block_size = 0;
+        int pos = first_remainder[0];
+        for (; block_size < first_remainder.size(); block_size++) {
+            if (first_remainder[block_size] != pos) break;
         }
-        if (j < 0) break;
+//        if (j < 0) break;
         // is true if we reduce column, false if we reduce row
         bool col = true;
         while (true) {
             if (col) {
                 // Pivotize
                 int k = -1; // row index of pivot
-                int h = 0; // index in indices where the pivot lays
-                for (int l = 0; l < indices.size(); l++) {
-                    int row = indices[l];
+                for (int row = 0; row < block_size; row++) {
                     if (k < 0 || num::COMPARE_ABS(vec::AT(temp, 0), vec::AT(remainder[row], 0)) > 0) {
                         temp = remainder[row];
                         k = row;
-                        h = l;
                     }
                 }
                 if (k < 0) return result;
-                remainder[k] = remainder[i];
-                remainder[i] = temp;
-                if (indices[0] != i) indices.erase(indices.begin() + h);
-                if (indices[0] == i) indices.erase(indices.begin());
-                std::vector<int> next_indices;
-                next_indices.reserve(indices.size() - 1);
+                remainder[k] = remainder[0];
+                remainder[0] = temp;
                 int occ = 0;
                 // TODO: Precompute dividend for remainder[i][0] to divide more efficiently
-                num::ap_int pre = num::PREPARE_NUM_SVOBODA(vec::AT(remainder[i], 0));
-                for (int l = 0; l < indices.size(); l++) {
-                    int row = indices[l];
+                num::ap_int pre = num::PRECOMPUTE_SDIV_DIVISOR(vec::AT(remainder[i], 0));
+                for (int row = 1; row < block_size; row++) {
                     num::ap_int lambda = num::SDIV(vec::AT(remainder[row], 0), vec::AT(remainder[i], 0), pre);
                     num::SWITCH_SIGN(lambda);
                     vec::ADD(remainder[row], 1, lambda, remainder[i], 1);
-                    if (num::GET_POS(vec::AT(remainder[row], 0)) == num::GET_POS(vec::AT(remainder[i], 0))) next_indices[occ++] = row;
-                }
-                indices = next_indices;
-                if (next_indices.size() > 0) {
-                    if (vec::GET_OCC(remainder[i]) > 0) indices.push_back(i);
-                    col = true;
-                } else col = false;
-            } else {
-                temp = remainder[i];
-                num::ap_int pre = num::PREPARE_SMOD_DIVISOR(vec::AT(temp, 0), vec::AT(temp, 1), vec::GET_OCC(temp) - 1);
-                // TODO: Precompute dividend for temp[0] to divide more efficiently
-                for (int l = 1; l < vec::GET_OCC(temp); l++) {
-                    num::SMOD(vec::AT(temp, l), vec::AT(temp, 0), pre);
-                    if (num::GET_OCC(vec::AT(temp, l)) == 0) {
-                        vec::DELETE_POS(temp, l);
-                        l--;
+                    int next_pos;
+                    if (vec::GET_OCC(remainder[row]) == 0) {
+                        // vector got reduced to 0
+                        vec::DELETE(remainder[row]);
+                        remainder.erase(remainder.begin() + row);
+                        remainder_first.erase(remainder_first.begin() + row);
+                        row--;
+                        block_size--;
+                    } else {
+                        if ((next_pos = num::GET_POS(vec::AT(remainder[row], 0))) != pos) {
+                            temp = remainder[row];
+                            k = binary_search(first_remainder, next_pos, block_size, first_remainder.size(), compare_ints);
+                            std::copy(first_remainder.begin() + row + 1, first_remainder.begin() + k, first_remainder.begin() + row);
+                            std::copy(remainder.begin() + row + 1, remainder.begin() + k, remainder.begin() + row);
+                            first_remainder[k] = next_pos;
+                            remainder[k] = temp;
+                            block_size--;
+                            row--;
+                        }
                     }
                 }
+                num::DELETE(pre);
+                col = block_size <= 1;
+            } else {
+                temp = remainder[0];
+                num::BATCH_SMOD(temp);
                 if (vec::GET_OCC(temp) == 1) {
                     auto it = result.find(vec::AT(temp, 0));
                     if (it == result.end()) {
@@ -327,27 +337,33 @@ std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> smith(stream<v
                     }
                     else (*it).second = (*it).second + 1u;
                     vec::DELETE(temp);
+                    remainder.erase(remainder.begin());
+                    first_remainder.erase(first_remainder.begin());
+                    n--;
                     break;
                 } else {
                     int k = -1;
-                    for (int row = 0; row < vec::GET_OCC(remainder[i]); row++) {
-                        if (k < 0 || num::COMPARE_ABS(vec::AT(remainder[i], k), vec::AT(remainder[i], row)) > 0) k = i;
+                    for (int row = 0; row < vec::GET_OCC(temp); row++) {
+                        if (k < 0 || num::COMPARE_ABS(vec::AT(temp, k), vec::AT(temp, row)) > 0) k = row;
                     }
-                    vec::SWAP_VALUES(remainder[i], 0, k);
-                    for(int row = i + 1; row < n; row++) {
-                        int l = vec::FIND_POS(remainder[row], num::GET_POS(vec::AT(remainder[i], k)));
-                        if (l < vec::GET_OCC(remainder[row]) && num::GET_POS(vec::AT(remainder[row], l)) == num::GET_POS(vec::AT(remainder[row], k))) {
-                            num::SET_POS(vec::AT(remainder[row], l), num::GET_POS(vec::AT(remainder[i], 0)));
-                            vec::PUT(remainder[row], vec::AT(remainder[row], l));
-                            vec::DELETE_POS(remainder[row], l + 1);
-                            indices.push_back(row);
+                    vec::SWAP_VALUES(temp, 0, k);
+                    vec::s_vec temp_row;
+                    for(int row = 1; row < n; row++) {
+                        temp_row = remainder[row];
+                        int l = vec::FIND_POS(temp_row, pos);
+                        if (l < vec::GET_OCC(temp_row) && num::GET_POS(vec::AT(temp_row, l)) == num::GET_POS(vec::AT(temp_row, k))) {
+                            num::SET_POS(vec::AT(temp_row, l), pos);
+                            vec::PUT(temp_row, vec::AT(temp_row, l));
+                            vec::DELETE_POS(temp_row, l + 1);
+                            // get this vector to the front
+                            std::copy_backward(remainder.begin() + 1, remainder.begin() + row - 1, remainder.begin() + row);
+                            std::copy_backward(first_remainder.begin() + 1, first_remainder.begin() + row - 1, first_remainder.begin() + row);
+                            remainder[1] = temp_row;
+                            first_remainder[1] = pos;
+                            block_size++;
                         }
                     }
-                    if (indices.size() == 0) col = false;
-                    else {
-                        indices.push_back(i);
-                        col = true;
-                    }
+                    col = block_size > 1;
                 }
             }
         }

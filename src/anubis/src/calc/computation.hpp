@@ -298,10 +298,9 @@ std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> smith(stream<v
                 remainder[k] = remainder[0];
                 remainder[0] = temp;
                 int occ = 0;
-                // TODO: Precompute dividend for remainder[i][0] to divide more efficiently
-                num::ap_int pre = num::PRECOMPUTE_SDIV_DIVISOR(vec::AT(remainder[i], 0));
+//                num::ap_int pre = num::PRECOMPUTE_SDIV_DIVISOR(vec::AT(remainder[i], 0));
                 for (int row = 1; row < block_size; row++) {
-                    num::ap_int lambda = num::SDIV(vec::AT(remainder[row], 0), vec::AT(remainder[i], 0), pre);
+                    num::ap_int lambda = num::DIV(vec::AT(remainder[row], 0), vec::AT(remainder[i], 0));
                     num::SWITCH_SIGN(lambda);
                     vec::ADD(remainder[row], 1, lambda, remainder[i], 1);
                     int next_pos;
@@ -309,7 +308,7 @@ std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> smith(stream<v
                         // vector got reduced to 0
                         vec::DELETE(remainder[row]);
                         remainder.erase(remainder.begin() + row);
-                        remainder_first.erase(remainder_first.begin() + row);
+                        first_remainder.erase(first_remainder.begin() + row);
                         row--;
                         block_size--;
                     } else {
@@ -325,11 +324,11 @@ std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> smith(stream<v
                         }
                     }
                 }
-                num::DELETE(pre);
+//                num::DELETE(pre);
                 col = block_size <= 1;
             } else {
                 temp = remainder[0];
-                num::BATCH_SMOD(temp);
+                vec::MOD(temp);
                 if (vec::GET_OCC(temp) == 1) {
                     auto it = result.find(vec::AT(temp, 0));
                     if (it == result.end()) {

@@ -1,14 +1,26 @@
 set(LIBRARY_TARGET_NAME ARITHMETIC)
 
 set(${LIBRARY_TARGET_NAME}_SRC
-        src/auxiliary.cpp)
+        src/operator.cpp
+        src/constants.cpp
+        src/aux/auxiliary.cpp
+        src/aux/divide.cpp
+        src/aux/multiply.cpp
+        src/aux/modular.cpp)
 
 set(${LIBRARY_TARGET_NAME}_PUBLIC_HDR
         include/arithmetic/operator.hpp
         include/arithmetic/typedef.hpp)
 
 set(${LIBRARY_TARGET_NAME}_PRIVATE_HDR
-        src/arithmetic.hpp)
+        src/constants.hpp
+        src/operator.hpp
+        src/arithmetic.hpp
+        src/aux/hardware/hardware.hpp
+        src/aux/inl/auxiliary.inl
+        src/aux/inl/divide.inl
+        src/aux/inl/modular.inl
+        src/aux/inl/multiply.inl)
 
 add_library(${LIBRARY_TARGET_NAME} SHARED ${${LIBRARY_TARGET_NAME}_SRC} ${${LIBRARY_TARGET_NAME}_PUBLIC_HDR} ${${LIBRARY_TARGET_NAME}_PRIVATE_HDR})
 
@@ -25,11 +37,12 @@ generate_export_header(${LIBRARY_TARGET_NAME} EXPORT_FILE_NAME ${ARITHMETIC_EXPO
 add_library(${PROJECT_NAME}::${LIBRARY_TARGET_NAME} ALIAS ${LIBRARY_TARGET_NAME})
 
 set_target_properties(${LIBRARY_TARGET_NAME} PROPERTIES VERSION       ${${PROJECT_NAME}_VERSION}
-        PUBLIC_HEADER "${${LIBRARY_TARGET_NAME}_PUBLIC_HDR}")
+                                                        PUBLIC_HEADER "${${LIBRARY_TARGET_NAME}_PUBLIC_HDR}")
 
 target_include_directories(${LIBRARY_TARGET_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
         "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>"
         "$<BUILD_INTERFACE:${generated_headers}>")
+
 target_include_directories(${LIBRARY_TARGET_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>")
 
 install(TARGETS 	  ${LIBRARY_TARGET_NAME}

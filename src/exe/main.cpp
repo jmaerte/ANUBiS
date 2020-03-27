@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <chrono>
 #include <ANUBiS/complex.hpp>
+#include <arithmetic/operator.hpp>
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 static const std::string slash="\\";
@@ -22,7 +23,7 @@ int main() {
 //    auto c = jmaerte::anubis::s_tree::from_file(getenv("HOME") + slash + "Downloads" + slash + "c88");
 //
 //
-    auto c = jmaerte::anubis::s_list::from_file(getenv("HOME") + slash + "Downloads" + slash + "dummy_complex");
+    auto c = jmaerte::anubis::s_list::from_file(getenv("HOME") + slash + "Downloads" + slash + "c88");
 
 //
 //    std::vector<double> spec = c->laplacian_spectrum(0);
@@ -42,8 +43,17 @@ int main() {
 //    for (auto i : c->f_vector()) {
 //        std::cout << i << std::endl;
 //    }
+    for (int i = 0; i < 3; i++) {
+        auto m = c->homology(i);
+        if (i > 0) c->clear_dim(i - 1);
+        std::cout << "HOMOLOGY DIM " << i << std::endl;
+        auto it = m.begin();
+        while (it != m.end()) {
+            std::cout << num::STRINGIFY(it->first) << " -> " << it->second << "." << std::endl;
+            it++;
+        }
+    }
     auto finish = std::chrono::high_resolution_clock::now();
-    c->homology(1);
     std::cout << "Time elapsed: " << (finish - start).count() / 1e9 << "s" << std::endl;
     delete c;
     system("pause");

@@ -2,8 +2,8 @@
 // Created by jmaerte on 16.03.20.
 //
 
-#ifndef ANUBIS_SUPERBUILD_TYPEDEF_HPP
-#define ANUBIS_SUPERBUILD_TYPEDEF_HPP
+#ifndef ANUBIS_ARITHMETIC_SUPERBUILD_TYPEDEF_HPP
+#define ANUBIS_ARITHMETIC_SUPERBUILD_TYPEDEF_HPP
 
 #include <ARITHMETIC_EXPORT.h>
 
@@ -38,7 +38,7 @@ union svec_node {
 namespace jmaerte {
     namespace arith {
         namespace num {
-            typedef svec_node *ap_int;
+            typedef svec_node* ap_int;
         }
     }
 }
@@ -62,7 +62,8 @@ namespace jmaerte {
 namespace jmaerte {
     namespace arith {
         namespace vec {
-            typedef svec_node* s_vec;
+            typedef svec_node* s_ap_int_vec;
+            typedef float s_ap_float_vec; // TODO
         }
     }
 }

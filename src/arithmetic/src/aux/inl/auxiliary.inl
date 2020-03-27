@@ -41,10 +41,13 @@ namespace jmaerte {
                     ULL v_b;
                     ULL carry = 0ULL;
                     for ( ; a != end; ) {
+//                        std::cout << "a: " << *a << ", b: " << *b << ", carry: " << carry << std::endl;
                         v_b = *b++ + carry;
                         carry = (v_b < carry);
                         *a += v_b;
+//                        std::cout << "a_sum = " << *a;
                         carry += (*a++ < v_b);
+//                        std::cout << ", carry: " << carry << std::endl;
                     }
                     return carry;
                 }
@@ -61,16 +64,19 @@ namespace jmaerte {
                     ULL v_a;
                     ULL carry = 0ULL;
                     for ( ; a != end; ) {
+//                        std::cout << "a: " << *a << ", b: " << *b << ", carry: " << carry << ", sign: " << sign << std::endl;
                         v_b = *b++;
                         v_a = *a;
                         if (sign) {
                             v_a += carry; // v_a or v_b += carry?
                             carry = (v_a < carry || v_b < v_a); // this is actually exclusive due to carry \in \{0,1\}
                             *a++ = v_b - v_a;
+//                            std::cout << "a_diff: " << *(a - 1) << ", borrow: " << carry << std::endl;
                         } else {
                             v_b += carry;
                             carry = (v_b < carry || v_a < v_b);
                             *a++ = v_a - v_b;
+//                            std::cout << "a_diff: " << *(a - 1) << ", borrow: " << carry << std::endl;
                         }
                     }
                     return carry;

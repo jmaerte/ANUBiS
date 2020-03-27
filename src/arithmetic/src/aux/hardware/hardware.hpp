@@ -12,7 +12,8 @@ typedef unsigned long long ULL;
 #define HAVE_HARDWARE_INSTRUC 1
 
 #ifdef __SIZEOF_INT128__     // GNU C
-#define set_adc __builtin_uaddll_overflow;
+#include <immintrin.h>
+#define adc _addcarry_u64;
     static const unsigned __int128 ULL_MASK = (unsigned __int128) ULL_MAX;
     static inline void add_mul(ULL* mem, ULL a, ULL b) {
          unsigned __int128 prod =  a * (unsigned __int128)b;
@@ -40,7 +41,7 @@ typedef unsigned long long ULL;
 
 #elif defined(_M_X64) || defined(_M_ARM64)
 #include <intrin.h>
-    #define set_adc _addcarry_u64
+    #define adc _addcarry_u64
     #define mulh __umulh
     #define udiv _udiv128
     static inline void add_mul(ULL* mem, ULL a, ULL b) {
@@ -58,7 +59,7 @@ typedef unsigned long long ULL;
 
 #elif defined(_M_IA64)
 #include <intrin.h>
-    #define set_adc _addcarry_u64
+    #define adc _addcarry_u64
     #define udiv _udiv128
     static inline void add_mul(ULL* mem, ULL a, ULL b) {
         *mem += _umul128(a, b, mem + 1);
@@ -78,6 +79,16 @@ typedef unsigned long long ULL;
 
 #else
 # undef HAVE_HARDWARE_INSTRUC
+static char adc(char c, ULL a, ULL b, ULL* res) {
+    if (c) {
+        *res = a + b;
+        return (*res < a);
+    } else {
+        b += c;
+        *res = a + b;
+        c = (b < c || *res < b);
+    }
+}
 static void set_mul(ULL* mem, ULL a, ULL b) {
     ULL u = a & L_MASK;
     ULL temp = (a & L_MASK) * (b & L_MASK);

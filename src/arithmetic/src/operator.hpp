@@ -1,5 +1,5 @@
-#ifndef ANUBIS_SUPERBUILD_SRC_OPERATOR_HPP
-#define ANUBIS_SUPERBUILD_SRC_OPERATOR_HPP
+#ifndef ANUBIS_ARITHMETIC_SUPERBUILD_SRC_OPERATOR_PRIVATE_HPP
+#define ANUBIS_ARITHMETIC_SUPERBUILD_SRC_OPERATOR_PRIVATE_HPP
 
 //
 // Created by jmaerte on 23.03.20.
@@ -8,8 +8,9 @@
 #include "arithmetic/operator.hpp"
 #include "arithmetic.hpp"
 #include "constants.hpp"
-#include <cstring>
+#include <algorithm>
 #include <vector>
+#include <cstdlib>
 
 namespace jmaerte {
     namespace arith {
@@ -21,8 +22,31 @@ namespace jmaerte {
              * OPERATORS
              */
 
+            static inline std::string STRINGIFY(ap_int const n) {
+                std::string res = std::string("(") + (GET_SIGN(n) ? "-" : "");
+                bool set = false;
+                ULL pos;
+                for (int i = GET_OCC(n) - 1; i >= 0; i--) {
+                    pos = 1ULL << 63;
+                    while (pos != 0) {
+                        if (set) {
+                            res += (aux::GET(n, i) & pos) != 0 ? "1" : "0";
+                        } else {
+                            if (aux::GET(n, i) & pos) {
+                                set = true;
+                                res += "1";
+                            }
+                        }
+                        pos >>= 1;
+                    }
+                }
+                if (!set) res += "0";
+                res += ")_2";
+                return res;
+            }
+
             static inline int GET_POS(ap_int const n) {
-                return n->meta & NUM_POS_MASK >> 32;
+                return (n->meta & NUM_POS_MASK) >> 32;
             }
 
             static inline int GET_OCC(ap_int const n) {
@@ -42,19 +66,19 @@ namespace jmaerte {
             }
 
             static inline int GET_SIZE(ap_int const n) {
-                return n->meta & LL_MASK;
+                return (n->meta & NUM_SIZE_MASK) >> 16;
             }
 
             static inline void SET_POS(ap_int n, int pos) {
-                n->meta = n->meta & ~NUM_POS_MASK | ((ULL) pos << 32) & NUM_POS_MASK;
+                n->meta = (n->meta & ~NUM_POS_MASK) | (((ULL) pos) << 32);
             }
 
             static inline void SET_SIZE(ap_int n, int size) {
-                n->meta = n->meta & ~NUM_SIZE_MASK | ((size & LL_MASK) << 16);
+                n->meta = n->meta & ~NUM_SIZE_MASK | ((((ULL) size) & LL_MASK) << 16);
             }
 
             static inline void SET_OCC(ap_int n, int occ) {
-                n->meta = n->meta & ~NUM_OCC_MASK | (occ & LL_MASK);
+                n->meta = n->meta & ~NUM_OCC_MASK | (((ULL) occ) & LL_MASK);
             }
 
             static inline void SET_SIGN(ap_int n, bool sign) {
@@ -66,8 +90,8 @@ namespace jmaerte {
             }
 
             static inline void ASSIGN(ap_int a, ap_int const &b) {
-                *a = *b;
-                *(a + 1) = *(b + 1);
+                a->meta = b->meta;
+                (a + 1)->value = (b + 1)->value;
             }
 
             static inline void OVERWRITE(ap_int a, ap_int const &b) {
@@ -78,7 +102,10 @@ namespace jmaerte {
 
             static inline void ENLARGE(ap_int n, int size) {
                 if (size <= GET_SIZE(n)) return;
-                (n + 1)->value = (ULL *) realloc((n + 1)->value, size * BYTES_PER_ULL);
+                ULL* next = new ULL[size] { };
+                std::copy(GET_ABS_DATA(n), GET_ABS_DATA(n) + GET_OCC(n), next);
+                delete[] (n + 1)->value;
+                (n + 1)->value = next;
                 SET_SIZE(n, size);
             }
 
@@ -94,13 +121,13 @@ namespace jmaerte {
                 ap_int i = new svec_node[2]{
                         {.meta = (sign ? NUM_SIGN_MASK : 0ULL) | ((initial_size & LL_MASK) << 16) |
                                  (value ? 1ULL : 0ULL)},
-                        {.value = (ULL *) calloc(initial_size, BYTES_PER_ULL)}
+                        {.value = new ULL[initial_size] { }}
                 };
                 *((i + 1)->value) = value;
                 return i;
             }
 
-            static inline ap_int NEW(ULL *value, ULL size, ULL occ, bool sign) {
+            static inline ap_int NEW(ULL* value, ULL size, ULL occ, bool sign) {
                 return new svec_node[2]{
                         {.meta = (sign ? NUM_SIGN_MASK : 0u) | (size & LL_MASK << 16) | (occ & LL_MASK)},
                         {.value = value}
@@ -109,19 +136,19 @@ namespace jmaerte {
 
             static inline ap_int COPY(ap_int const n) {
                 ap_int res = NEW(GET_OCC(n), GET_SIGN(n), 0ULL);
-                std::memcpy(GET_ABS_DATA(n), GET_ABS_DATA(res), GET_OCC(n) * BYTES_PER_ULL); // was std::copy before.
+                *res = *n;
+                std::copy(GET_ABS_DATA(n), GET_ABS_DATA(n) + GET_OCC(n), GET_ABS_DATA(res)); // was std::copy before.
                 return res;
             }
 
             static inline void DELETE_DATA(ap_int i) {
-                free((i + 1)->value);
-//                delete[] (i + 1)->value;
+//                std::free((i + 1)->value);
+                delete[] (i + 1)->value;
             }
 
             static inline void DELETE(ap_int i) {
                 DELETE_DATA(i);
-                delete (i + 1);
-                delete i;
+                delete[] i;
             }
 
             /*
@@ -129,21 +156,37 @@ namespace jmaerte {
              */
 
             static inline void ADD(ap_int a, ap_int b) {
-                if (GET_SIGN(a) != GET_SIGN(b)) SUB(a, b);
-                else {
+                if (GET_SIGN(a) != GET_SIGN(b)) {
+                    SWITCH_SIGN(a);
+                    SUB(a, b);
+                    SWITCH_SIGN(a);
+                } else {
+//                    std::cout << "Adding" << std::endl;
                     ENLARGE(a, MAX(GET_OCC(a), GET_OCC(b)) + 1);
-                    SET_OCC(a, GET_OCC(a) + aux::ADD_DATA(GET_ABS_DATA(a), GET_ABS_DATA(b), GET_OCC(a), GET_OCC(b)));
+//                    std::cout << "enlarged: occ = " << GET_OCC(a) << " size = " << GET_SIZE(a) << std::endl;
+//                    std::cout << "a = " << num::STRINGIFY(a) << std::endl;
+//                    std::cout << "b = " << num::STRINGIFY(b) << std::endl;
+                    SET_OCC(a, MAX(GET_OCC(a), GET_OCC(b)) + aux::ADD_DATA(GET_ABS_DATA(a), GET_ABS_DATA(b), GET_OCC(a), GET_OCC(b)));
+//                    std::cout << "sum = " << num::STRINGIFY(a) << std::endl;
                 }
             }
 
             static inline void SUB(ap_int a, ap_int b) {
-                if (GET_SIGN(a) != GET_SIGN(b)) ADD(a, b);
-                else {
+                if (GET_SIGN(a) != GET_SIGN(b)) {
+                    SWITCH_SIGN(a);
+                    ADD(a, b);
+                    SWITCH_SIGN(a);
+                } else {
+//                    std::cout << "Subtracting" << std::endl;
                     ULL size = MAX(GET_OCC(a), GET_OCC(b)) + 1;
                     ENLARGE(a, size); // this sets the last place to 0.
-                    SET_SIGN(a, aux::SUB_DATA(GET_ABS_DATA(a), GET_ABS_DATA(b), GET_OCC(a), GET_OCC(b)));
+//                    std::cout << "enlarged: occ = " << GET_OCC(a) << " size = " << GET_SIZE(a) << std::endl;
+//                    std::cout << "a = " << num::STRINGIFY(a) << std::endl;
+//                    std::cout << "b = " << num::STRINGIFY(b) << std::endl;
+                    SET_SIGN(a, GET_SIGN(a) ^ aux::SUB_DATA(GET_ABS_DATA(a), GET_ABS_DATA(b), GET_OCC(a), GET_OCC(b)));
                     aux::STRIP(GET_ABS_DATA(a), size);
                     SET_OCC(a, size);
+//                    std::cout << "diff = " << num::STRINGIFY(a) << std::endl;
                 }
             }
 
@@ -176,41 +219,46 @@ namespace jmaerte {
              * OPERATORS
              */
 
-            static inline int GET_SIZE(s_vec v) {
+            static inline int GET_SIZE(s_ap_int_vec v) {
                 return v->meta >> 32;
             }
 
-            static inline int GET_OCC(s_vec v) {
+            static inline int GET_OCC(s_ap_int_vec v) {
                 return v->meta & L_MASK;
             }
 
-            static inline void SET_OCC(s_vec v, int occ) {
-                v->meta = v->meta & H_MASK | (ULL) occ;
+            static inline void SET_SIZE(s_ap_int_vec* v, int size) {
+                (*v)->meta = (*v)->meta & L_MASK | (((ULL) size) << 32);
             }
 
-            static inline num::ap_int AT(s_vec v, int i) {
+            static inline void SET_OCC(s_ap_int_vec* v, int occ) {
+                (*v)->meta = (*v)->meta & H_MASK | (ULL) occ;
+            }
+
+            static inline num::ap_int AT(s_ap_int_vec v, int i) {
                 return v + 1 + 2 * i;
             }
 
-            static inline void ENLARGE(s_vec &v, int size) {
-                s_vec next = new svec_node[2 * size + 1];
-                std::copy(v, AT(v, GET_OCC(v)), next);
-                delete[] v;
-                v = next;
+            static inline void ENLARGE(s_ap_int_vec* v, int size) {
+                svec_node* next = new svec_node[2 * size + 1] { };
+                std::copy(*v, AT(*v, GET_OCC(*v)), next);
+                delete[] *v;
+                *v = next;
+                SET_SIZE(v, size);
             }
 
-            static inline void ENLARGE(s_vec &v) {
-                ENLARGE(v, 2 * GET_SIZE(v));
+            static inline void ENLARGE(s_ap_int_vec* v) {
+                ENLARGE(v, 2 * GET_SIZE(*v));
             }
 
-            static inline void SWITCH_SIGNS(s_vec v) {
+            static inline void SWITCH_SIGNS(s_ap_int_vec v) {
                 int occ = GET_OCC(v);
                 for (int i = 0; i < occ; i++) {
                     num::SWITCH_SIGN(AT(v, i));
                 }
             }
 
-            static inline void SWAP_VALUES(s_vec v, int i, int j) {
+            static inline void SWAP_VALUES(s_ap_int_vec v, int i, int j) {
                 ULL temp = AT(v, i)->meta;
                 AT(v, i)->meta = AT(v, j)->meta & ~NUM_POS_MASK | temp & NUM_POS_MASK;
                 AT(v, j)->meta = temp & ~NUM_POS_MASK | AT(v, j)->meta & NUM_POS_MASK;
@@ -220,42 +268,44 @@ namespace jmaerte {
                 *(AT(v, j) + 1) = *a;
             }
 
-            static inline void SET(s_vec v, int k, num::ap_int n) {
-                num::ASSIGN(AT(v, k), n);
+            static inline void SET(s_ap_int_vec* v, int k, num::ap_int n) {
+                num::ASSIGN(AT(*v, k), n); // OVERWRITE?
             }
 
             /*
              * (DE-)ALLOCATION
              */
 
-            static inline s_vec NEW(std::vector < std::pair < ULL, std::pair < bool, ULL >> > vector) {
-                s_vec v = new svec_node[1 + 2 * vector.size()];
-                v[0] = {.meta = ((ULL) vector.size()) << 32 | ((ULL) vector.size()) & L_MASK};
+            static inline s_ap_int_vec NEW(std::vector < std::pair < ULL, std::pair < bool, ULL > > > vector) {
+                svec_node* v = new svec_node[1 + 2 * vector.size()] { };
+                *v = {.meta = (((ULL) vector.size()) << 32) | (((ULL) vector.size()) & L_MASK)};
                 int i = 1;
                 for (auto it = vector.begin(); it != vector.end(); it++) {
-                    num::ap_int n = num::NEW(1u, it->second.first, it->second.second);
-                    n->meta |= (it->first & FIFTEEN) << 32;
-                    v[i++] = *n;
-                    v[i++] = *(n + 1);
+                    num::ap_int n = num::NEW(1ULL, it->second.first, it->second.second);
+                    num::SET_POS(n, it->first);
+                    *(v + i++) = *n;
+                    *(v + i++) = *(n + 1);
+                    delete[] n;
                 }
                 return v;
             }
 
-            static inline void DELETE(s_vec &v) {
-                ULL occ = v->meta & L_MASK;
+            static inline void DELETE(s_ap_int_vec* v) {
+                ULL occ = GET_OCC(*v);
                 for (int i = 0; i < occ; i++) {
-                    num::DELETE(AT(v, i));
+                    num::DELETE_DATA(AT(*v, i));
                 }
-                delete[] v;
+                delete[] *v;
+//                std::free(v);
             }
 
-            static inline void DELETE_POS(s_vec &v, int i) {
+            static inline void DELETE_POS(s_ap_int_vec v, int i) {
                 num::DELETE_DATA(AT(v, i));
                 std::copy(AT(v, i + 1), AT(v, GET_OCC(v)), AT(v, i));
-                SET_OCC(v, GET_OCC(v) - 1);
+                SET_OCC(&v, GET_OCC(v) - 1);
             }
         }
     }
 }
 
-#endif //ANUBIS_SUPERBUILD_SRC_OPERATOR_HPP
+#endif //ANUBIS_ARITHMETIC_SUPERBUILD_SRC_OPERATOR_PRIVATE_HPP

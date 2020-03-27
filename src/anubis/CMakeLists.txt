@@ -3,7 +3,6 @@ set(LIBRARY_TARGET_NAME ${PROJECT_NAME})
 set(${LIBRARY_TARGET_NAME}_SRC
 		src/complex.cpp
 		src/data_types/lin/sparse.cpp
-		src/multi_thread/rw_mutex.cpp
 		src/data_types/potence/potence.cpp)
 
 set(${LIBRARY_TARGET_NAME}_PUBLIC_HDR
@@ -11,11 +10,9 @@ set(${LIBRARY_TARGET_NAME}_PUBLIC_HDR
 
 set(${LIBRARY_TARGET_NAME}_PRIVATE_HDR
 		src/calc/computation.hpp
-		src/data_types/lazy/stream.hpp
 		src/data_types/lin/sparse.hpp
 		src/data_types/potence/potence.hpp
 		src/multi_thread/thread_pool.hpp
-		src/multi_thread/rw_mutex.hpp
 		src/calc/computation.hpp
 		src/calc/utils.hpp)
 
@@ -42,7 +39,11 @@ target_include_directories(${LIBRARY_TARGET_NAME} PUBLIC "$<BUILD_INTERFACE:${CM
 
 target_include_directories(${LIBRARY_TARGET_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>")
 
-target_link_libraries (${LIBRARY_TARGET_NAME} ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${PROJECT_NAME}::ARITHMETIC)
+target_link_libraries (${LIBRARY_TARGET_NAME} ${Boost_LIBRARIES}
+						${CMAKE_THREAD_LIBS_INIT}
+						${PROJECT_NAME}::ALGEBRA
+						${PROJECT_NAME}::DATA_STRUCTURES
+						${PROJECT_NAME}::ARITHMETIC)
 
 IF(WIN32)
 	target_link_libraries(${LIBRARY_TARGET_NAME} winpthread)

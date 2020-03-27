@@ -4,11 +4,13 @@
 
 #include <cassert>
 #include "ANUBiS/complex.hpp"
-#include "data_types/lin/sparse.hpp"
 #include "calc/computation.hpp"
 #include "data_types/potence/potence.hpp"
 #include "multi_thread/thread_pool.hpp"
 #include <boost/regex.hpp>
+#include <utility>
+#include <algebra/typedef.hpp>
+#include <algebra/reduction.hpp>
 
 using namespace jmaerte::arith;
 
@@ -19,6 +21,8 @@ static const char LogTable256[256] = {
                 LT(7), LT(7), LT(7), LT(7), LT(7), LT(7), LT(7), LT(7)
 };
 
+
+using namespace jmaerte::algebra;
 
 namespace jmaerte {
     namespace anubis {
@@ -181,11 +185,11 @@ namespace jmaerte {
             return 0;
         }
 
-        int binary_search(unsigned int * list, unsigned int * simplex, int list_size, int SIMPLEX_SIZE) {
-            if (list_size == 0 || compare_to(list + (list_size - 1) * SIMPLEX_SIZE, simplex, SIMPLEX_SIZE) < 0) return list_size;
+        int binary_search(unsigned int * list, unsigned int * simplex, int start, int end, int SIMPLEX_SIZE) {
+            if (end == 0 || compare_to(list + (end - 1) * SIMPLEX_SIZE, simplex, SIMPLEX_SIZE) < 0) return end;
             if (compare_to(simplex, list, SIMPLEX_SIZE) < 0) return 0;
-            int min = 0;
-            int max = list_size;
+            int min = start;
+            int max = end;
             int compare = 0;
             while (min < max) {
                 int mid = (min + max)/2;
@@ -223,7 +227,8 @@ namespace jmaerte {
 
 
         std::vector<double> complex::laplacian_spectrum(int i) {
-            return eigen(laplacian(i), f[i]);
+            return {};
+//            return eigen(laplacian(i), f[i]);
         }
 
         complex::complex(std::string name, int sceleton) : name(name), sceleton(sceleton) {}
@@ -237,8 +242,8 @@ namespace jmaerte {
          * s_list implementations
          **************************************************************************************************************/
 
-        stream<sparse<double>> s_list::laplacian(int i) {
-            return stream<sparse<double>>();
+        s_float_matrix s_list::laplacian(int i) {
+            return {};
         }
 
         void s_list::facet_insert(const std::vector<unsigned int> * v) {
@@ -285,14 +290,14 @@ namespace jmaerte {
                 if (facet.size() < dim + 1) continue;
                 potence<unsigned int> pot {facet, (int) dim + 1};
                 while (!pot.done() && pot.order() == dim + 1) {
-                    auto * simplex = new unsigned int[SIMPLEX_SIZE];
-                    for (int i = 0; i < SIMPLEX_SIZE; i++) {
-                        simplex[i] = 0u;
-                    }
+                    auto * simplex = new unsigned int[SIMPLEX_SIZE] { };
+//                    for (int i = 0; i < SIMPLEX_SIZE; i++) {
+//                        simplex[i] = 0u;
+//                    }
                     for (auto it = pot.begin(); it != pot.end(); ++it) {
                         simplex[*it / UINT_SIZE] |= 1u << (*it % UINT_SIZE);
                     }
-                    int k = binary_search(list, simplex, filled, SIMPLEX_SIZE);
+                    int k = binary_search(list, simplex, 0, filled, SIMPLEX_SIZE);
                     if (k == filled || !equals(list + k * SIMPLEX_SIZE, simplex, SIMPLEX_SIZE)) {
                         size = insert(simplex, k, list, filled, size, SIMPLEX_SIZE);
                         filled++;
@@ -344,11 +349,17 @@ namespace jmaerte {
             clear_map();
         }
 
-        stream<vec::s_vec> s_list::boundary(int dim) {
+        s_int_matrix s_list::boundary(int dim) {
             assert(0 <= dim && dim < f.size());
-            if(f[dim] == 0) generate(dim);
+            if(f[dim] == 0) {
+                generate(dim);
+                std::cout << "Generated faces of dimension " << dim << "; f_" << dim << " = " << f[dim] << "." << std::endl;
+            }
             if (dim > 0) {
-                if(f[dim - 1] == 0) generate(dim - 1);
+                if(f[dim - 1] == 0) {
+                    generate(dim - 1);
+                    std::cout << "Generated faces of dimension " << (dim - 1) << "; f_" << (dim - 1) << " = " << f[dim - 1] << "." << std::endl;
+                }
             }
             int SIMPLEX_SIZE = get_simplex_size();
             return dim == 0 ? transform(ints_from(0).take(f[dim]), [this](int i) {
@@ -356,24 +367,23 @@ namespace jmaerte {
                     {0ULL, {false, 1ULL}}
                 }); // reduced boundary
             }) : transform(ints_from(0).take(f[dim]), [this, dim, SIMPLEX_SIZE](int i) {
-                std::cout << "generating..." << std::endl;
                 std::vector<std::pair<ULL, std::pair<bool, ULL>>> vec {static_cast<std::size_t>(dim + 1)};
                 unsigned int * simplex = this->past[dim] + i * SIMPLEX_SIZE;
                 int curr_index = 0;
                 unsigned int curr = simplex[0];
                 unsigned int leading;
-                unsigned int temp;
-                for (int pos = 0; pos < dim + 1; pos++) {
-                    while (curr == 0) curr = simplex[++curr_index];
+                unsigned int k = f[dim - 1];
+
+                for (int pos = dim; pos >= 0; pos--) {
+                    while (curr == 0) curr = *(simplex + ++curr_index);
                     leading = ((curr - 1) | curr) ^ (curr - 1);
                     curr = curr ^ leading; // remove this leading bit from curr.
-                    temp = simplex[curr_index];
-                    simplex[curr_index] ^= leading;
-                    vec[pos] = {
-                            binary_search(this->past[dim - 1], simplex, f[dim - 1], SIMPLEX_SIZE),
-                            {pos % 2 == 0, 1ULL}
-                    };
-                    simplex[curr_index] = temp;
+                    *(simplex + curr_index) ^= leading;
+                    vec[pos] = std::make_pair(
+                            (ULL) (k = binary_search(this->past[dim - 1], simplex, 0, k, SIMPLEX_SIZE)),
+                            std::make_pair(pos % 2, 1ULL)
+                    );
+                    *(simplex + curr_index) |= leading;
                 }
                 return vec::NEW(vec);
             });
@@ -386,47 +396,50 @@ namespace jmaerte {
         std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> s_list::homology(int dim) {
             auto it_dim = smith_forms.find(dim);
             if (it_dim == smith_forms.end()) {
-                smith_forms.emplace(dim, smith(boundary(dim)));
+                smith_forms.emplace(dim, reduction::smith(boundary(dim)));
                 it_dim = smith_forms.find(dim);
             }
             auto d_map = it_dim->second;
             unsigned int kernel_rank = f[dim];
-            if (dim > 0) {
 
-                it_dim = smith_forms.find(dim - 1);
-                if (it_dim == smith_forms.end()) {
-                    smith_forms.emplace(dim - 1, smith(boundary(dim - 1)));
-                    it_dim = smith_forms.find(dim - 1);
-                }
-                auto d_m_map = it_dim->second;
-
-                int rank_low = 0;
-
-                for (auto kv : d_m_map) {
-                    rank_low += kv.second;
-                }
-                kernel_rank -= rank_low;
+            auto it = d_map.begin();
+            while (it != d_map.end()) {
+                // DEBUGGING
+                std::cout << num::STRINGIFY(it->first) << " -> " << it->second << "." << std::endl;
+                // END DEBUGGING
+                kernel_rank -= it->second;
+                it++;
             }
             std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> result {};
-            unsigned int rank = kernel_rank;
-            for (auto kv : d_map) {
-                if (!(num::GET_OCC(kv.first) == 1 && num::GET_ABS_DATA(kv.first)[0] == 1ULL)) result.emplace(kv.first, kv.second);
-                rank -= kv.second;
+            if (dim + 1 < f.size()) {
+                it_dim = smith_forms.find(dim + 1);
+                if (it_dim == smith_forms.end()) {
+                    smith_forms.emplace(dim + 1, reduction::smith(boundary(dim + 1)));
+                    it_dim = smith_forms.find(dim + 1);
+                }
+                auto d_m_map = it_dim->second;
+                for (auto kv : d_m_map) {
+                    std::cout << num::STRINGIFY(kv.first) << " -> " << kv.second << "." << std::endl;
+                    if (!(num::GET_OCC(kv.first) == 1 && *(num::GET_ABS_DATA(kv.first)) == 1ULL)) result.emplace(kv.first, kv.second);
+                    kernel_rank -= kv.second;
+                }
             }
-            result.emplace(num::NEW(1, false, 0ULL), rank);
+            result.emplace(num::NEW(1, false, 0ULL), kernel_rank);
+            return result;
         }
 
         /***************************************************************************************************************
          * s_tree implementations
          **************************************************************************************************************/
 
-        stream<sparse<double>> s_tree::laplacian(int dim) {
-            assert(0 <= dim && dim < f.size());
-            return dim == 0 ? transform(ints_from(0).take(f[0]), [this](int i) {
-                return sparse<double>();
-            }) : transform(ints_from(0).take(f[dim]), [dim, this](int i) {
-                return sparse<double>();
-            });
+        s_float_matrix s_tree::laplacian(int dim) {
+            return {};
+//            assert(0 <= dim && dim < f.size());
+//            return dim == 0 ? transform(ints_from(0).take(f[0]), [this](int i) {
+//                return sparse<double>();
+//            }) : transform(ints_from(0).take(f[dim]), [dim, this](int i) {
+//                return sparse<double>();
+//            });
         }
 
         void s_tree::_insert(std::vector<int> v) {
@@ -511,8 +524,8 @@ namespace jmaerte {
             }, facets, name, sceleton);
         }
 
-        stream<vec::s_vec> s_tree::boundary(int dim) {
-            return stream<vec::s_vec>();
+        s_int_matrix s_tree::boundary(int dim) {
+            return {};
         }
 
         std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> s_tree::homology(int i) {

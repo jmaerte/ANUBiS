@@ -11,18 +11,18 @@
 #include <iostream>
 #include <iterator>
 #include <unordered_map>
-#include "multi_thread/rw_mutex.hpp"
+#include <mutex>
 #include "data_types/lin/sparse.hpp"
-#include <arithmetic/typedef.hpp>
+#include <algebra/typedef.hpp>
+#include <data_types/stream.hpp>
 #include <ANUBIS_EXPORT.h>
 
-template<class T>
-class stream;
-
 using namespace jmaerte::arith;
+using namespace jmaerte::algebra;
 
 namespace jmaerte {
     namespace anubis {
+
 
         /** @brief Virtual class abstraction of a simplicial complex. It guarentees us, that non-abstract child classes
          * enable us to calculate their homology and laplacian spectrum.
@@ -35,8 +35,8 @@ namespace jmaerte {
         class ANUBIS_EXPORT complex {
         private:
 
-            virtual stream<sparse<double>> laplacian(int i) = 0;
-            virtual stream<vec::s_vec> boundary(int dim) = 0;
+            virtual s_float_matrix   laplacian(int i) = 0;
+            virtual s_int_matrix     boundary(int dim) = 0;
 
         protected:
 
@@ -69,12 +69,11 @@ namespace jmaerte {
             std::map<unsigned int, std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR>> smith_forms;
             int vertices;
 
-            stream<sparse<double>> laplacian(int i) override;
+            s_float_matrix   laplacian(int i) override;
+            s_int_matrix     boundary(int dim) override;
 
             std::pair<int, int> bit_position(int pos);
             int get_simplex_size();
-
-            stream<vec::s_vec> boundary(int dim) override;
 
             s_list(std::string name, int sceleton): complex(name, sceleton), smith_forms() {}
 
@@ -128,7 +127,8 @@ namespace jmaerte {
                 return n;
             }
 
-            stream<vec::s_vec> boundary(int dim) override;
+            s_int_matrix     boundary(int dim) override;
+            s_float_matrix   laplacian(int i) override;
 
             s_tree(std::string name, int sceleton = -1);
 
@@ -137,7 +137,6 @@ namespace jmaerte {
 
             node* head = get_node();
 
-            stream<sparse<double>> laplacian(int i) override;
         public:
 
             ~s_tree();

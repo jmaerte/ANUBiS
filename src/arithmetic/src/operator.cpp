@@ -4,6 +4,8 @@
 
 #include "arithmetic/operator.hpp"
 #include "arithmetic.hpp"
+#include "constants.hpp"
+#include <cstdlib>
 
 namespace jmaerte {
     namespace arith {
@@ -76,13 +78,33 @@ namespace jmaerte {
              */
 
             ap_int iMUL(ap_int a, ap_int b) {
-                if (GET_OCC(a) > GET_OCC(b)) {
-                    return iMUL(b, a);
-                }
+//                if (GET_OCC(a) > GET_OCC(b)) {
+//                    return iMUL(b, a);
+//                }
+//                std::cout << "a occ: " << GET_OCC(a) << " b occ: " << GET_OCC(b) << std::endl;
+//                std::cout << "a: ";
+//                for (int i = 0; i < GET_OCC(a); i++) {
+//                    std::cout << *(GET_ABS_DATA(a) + i) << " ";
+//                }
+//                std::cout << std::endl;
+//                std::cout << "b: ";
+//                for (int i = 0; i < GET_OCC(b); i++) {
+//                    std::cout << *(GET_ABS_DATA(b) + i) << " ";
+//                }
+//                std::cout << std::endl;
+
                 int occ = GET_OCC(a) + GET_OCC(b);
-                ULL *result = new ULL[occ];
+                ULL *result = new ULL[occ] { };
                 occ -= 1 - aux::iREC_MUL_DATA(result, GET_ABS_DATA(a), GET_OCC(a), GET_ABS_DATA(b), GET_OCC(b));
-                return NEW(result, occ, occ, GET_SIGN(a) ^ GET_SIGN(b));
+                return NEW(result, GET_OCC(a) + GET_OCC(b), occ, GET_SIGN(a) ^ GET_SIGN(b));
+            }
+
+            void iMUL(ap_int dest, ap_int a, ap_int b) {
+                int occ = GET_OCC(a) + GET_OCC(b);
+                ULL *result = new ULL[occ] { };
+                occ -= 1 - aux::iREC_MUL_DATA(result, GET_ABS_DATA(a), GET_OCC(a), GET_ABS_DATA(b), GET_OCC(b));
+                *dest = {.meta = ((GET_SIGN(a) ^ GET_SIGN(b)) ? NUM_SIGN_MASK : 0ULL) | (((GET_OCC(a) + GET_OCC(b)) & LL_MASK) << 16) | (ULL) occ};
+                *(dest + 1) = (svec_node){.value = result};
             }
 
             void MUL(ap_int a, ap_int b) {
@@ -113,7 +135,7 @@ namespace jmaerte {
 
             ap_int iSQR(ap_int a) {
                 int n = GET_OCC(a);
-                ULL *result = new ULL[2 * n];
+                ULL *result = new ULL[2 * n] { };
                 ULL *dat = GET_ABS_DATA(a);
                 int occ = 2 * n - 1 + aux::iREC_SQR_DATA(result, dat, n);
                 return NEW(result, 2 * n, occ, false);
@@ -123,7 +145,7 @@ namespace jmaerte {
                 if (GET_OCC(a) > GET_OCC(b)) {
                     return iMUL(b, a);
                 }
-                ULL *result = new ULL[n];
+                ULL *result = new ULL[n] { };
                 aux::iREC_MULL_DATA(result, GET_ABS_DATA(a), GET_OCC(a), GET_ABS_DATA(b), GET_OCC(b), 0, n);
                 ULL occ = n;
                 aux::STRIP(result, occ);
@@ -169,7 +191,7 @@ namespace jmaerte {
 
         namespace vec {
 
-            int FIND_POS(s_vec v, int pos) {
+            int FIND_POS(s_ap_int_vec v, int pos) {
                 int occ = GET_OCC(v);
                 if (occ == 0 || num::GET_POS(AT(v, occ - 1)) < pos) return occ;
                 if (num::GET_POS(AT(v, 0)) < pos) return 0;
@@ -185,69 +207,158 @@ namespace jmaerte {
                 return min;
             }
 
-            void PUT(s_vec v, num::ap_int n) {
-                int k = FIND_POS(v, num::GET_POS(n));
-                if (GET_SIZE(v) <= GET_OCC(v)) {
+            void PUT(s_ap_int_vec* v, num::ap_int n) {
+                int k = FIND_POS(*v, num::GET_POS(n));
+                if (GET_SIZE(*v) <= GET_OCC(*v)) {
                     ENLARGE(v);
                 }
-                if (k < GET_OCC(v)) {
-                    std::copy_backward(AT(v, k), AT(v, GET_OCC(v)), AT(v, GET_OCC(v) + 2));
+                if (k < GET_OCC(*v)) {
+                    std::copy_backward(AT(*v, k), AT(*v, GET_OCC(*v)), AT(*v, GET_OCC(*v) + 2));
                 }
                 SET(v, k, n);
+                SET_OCC(v, GET_OCC(*v) + 1);
             }
 
             /*
              * ARITHMETIC
              */
 
-            void ADD(s_vec a, int start_a, num::ap_int lambda, s_vec b, int start_b) {
-                num::ap_int a_end = AT(a, GET_OCC(a));
+            void REDUCE(s_ap_int_vec* a, s_ap_int_vec b, int k) {
+                num::ap_int a_end = AT(*a, GET_OCC(*a));
                 num::ap_int b_end = AT(b, GET_OCC(b));
 
-                num::ap_int it_a = AT(a, start_a);
-                num::ap_int j = AT(b, start_b);
+                num::ap_int it_a = AT(*a, k + 1);
+                num::ap_int j = AT(b, 1);
 
-                for (int i = start_a; i != GET_OCC(a) && j != b_end;) {
+                for (int i = k + 1; i < GET_OCC(*a) && j != b_end;) {
+//                    std::cout << num::GET_POS(it_a) << " " << num::GET_POS(j) << std::endl;
+//                    std::cout << "i: " << i << ", occ: " << GET_OCC(*a) << ", size: " << GET_SIZE(*a) << std::endl;
                     if (num::GET_POS(it_a) < num::GET_POS(j)) {
                         i++;
                         it_a += 2;
                     } else if (num::GET_POS(it_a) > num::GET_POS(j)) {
-                        if (GET_OCC(a) + 1 > GET_SIZE(a)) {
+                        if (GET_OCC(*a) + 1 > GET_SIZE(*a)) {
                             ENLARGE(a);
-                            it_a = AT(a, i);
-                            a_end = AT(a, GET_OCC(a));
+                            it_a = AT(*a, i);
+                            a_end = AT(*a, GET_OCC(*a));
                         }
                         // copy j and j + 1 into a.
                         std::copy_backward(it_a, a_end, a_end + 2);
-                        num::ASSIGN(it_a, num::iMUL(lambda, j));
-                        SET_OCC(a, GET_OCC(a) + 1);
+                        num::iMUL(it_a, AT(*a, k), j);
+                        num::SET_POS(it_a, num::GET_POS(j));
+                        SET_OCC(a, GET_OCC(*a) + 1);
+                        a_end += 2;
                         j += 2;
                     } else {
-                        num::ap_int x = num::iMUL(lambda, j);
-                        num::ADD(it_a, x);
-                        num::DELETE(x);
-                        it_a += 2;
-                        i++;
+//                        if (num::GET_OCC(AT(*a, k)) == 1) {
+//                            if (num::GET_SIGN(AT(*a, k))) num::aux::SUB(it_a, *(num::GET_ABS_DATA(AT(*a, k))), 0, j);
+//                            else num::aux::ADD(it_a, *(num::GET_ABS_DATA(AT(*a, k))), 0, j);
+//                        } else {
+                            num::ap_int x = num::iMUL(AT(*a, k), j);
+                            num::ADD(it_a, x);
+                            num::DELETE(x);
+//                        }
+                        if (num::GET_OCC(it_a) == 0) {
+                            DELETE_POS(*a, i);
+                            a_end -= 2;
+                        } else {
+                            it_a += 2;
+                            i++;
+                        }
                         j += 2;
                     }
                 }
 
                 if (j != b_end) {
-                    if (GET_OCC(a) + (b_end - j) / 2 > GET_SIZE(a)) {
-                        ENLARGE(a, GET_OCC(a) + (b_end - j) / 2);
-                        a_end = AT(a, GET_OCC(a));
+                    if (GET_OCC(*a) + (b_end - j) / 2 > GET_SIZE(*a)) {
+                        ENLARGE(a, GET_OCC(*a) + (b_end - j) / 2);
                     }
-                    std::copy(j, b_end, a_end);
+                    it_a = AT(*a, GET_OCC(*a));
+                    SET_OCC(a, GET_OCC(*a) + (b_end - j) / 2);
+                    while (j != b_end) {
+                        num::ap_int x = num::iMUL(AT(*a, k), j);
+                        num::SET_POS(x, num::GET_POS(j));
+                        num::ASSIGN(it_a, x);
+                        delete[] x;
+                        j += 2;
+                        it_a += 2;
+                    }
+                }
+                vec::DELETE_POS(*a, k);
+            }
+
+            void ADD(s_ap_int_vec* a, int start_a, num::ap_int lambda, s_ap_int_vec b, int start_b) {
+                num::ap_int a_end = AT(*a, GET_OCC(*a));
+                num::ap_int b_end = AT(b, GET_OCC(b));
+
+                num::ap_int it_a = AT(*a, start_a);
+                num::ap_int j = AT(b, start_b);
+
+                for (int i = start_a; i < GET_OCC(*a) && j != b_end;) {
+//                    std::cout << num::GET_POS(it_a) << " " << num::GET_POS(j) << std::endl;
+//                    std::cout << "i: " << i << ", occ: " << GET_OCC(*a) << std::endl;
+                    if (num::GET_POS(it_a) < num::GET_POS(j)) {
+                        i++;
+                        it_a += 2;
+                    } else if (num::GET_POS(it_a) > num::GET_POS(j)) {
+                        if (GET_OCC(*a) + 1 > GET_SIZE(*a)) {
+                            ENLARGE(a);
+                            it_a = AT(*a, i);
+                            a_end = AT(*a, GET_OCC(*a));
+                        }
+                        // copy j and j + 1 into a.
+                        std::copy_backward(it_a, a_end, a_end + 2);
+                        num::ap_int x = num::iMUL(lambda, j);
+                        num::SET_POS(x, num::GET_POS(j));
+                        num::ASSIGN(it_a, x);
+                        delete[] x;
+                        SET_OCC(a, GET_OCC(*a) + 1);
+                        a_end += 2;
+                        j += 2;
+                    } else {
+                        num::ap_int x = num::iMUL(lambda, j);
+                        num::ADD(it_a, x);
+                        num::DELETE(x);
+                        if (num::GET_OCC(it_a) == 0) {
+                            DELETE_POS(*a, i);
+                            a_end -= 2;
+                        } else {
+                            it_a += 2;
+                            i++;
+                        }
+                        j += 2;
+                    }
+                }
+
+                if (j != b_end) {
+//                    std::cout << "copying the rest of b" << std::endl;
+                    if (GET_OCC(*a) + (b_end - j) / 2 > GET_SIZE(*a)) {
+                        ENLARGE(a, GET_OCC(*a) + (b_end - j) / 2);
+//                        std::cout << "enlarged a" << std::endl;
+                    }
+                    it_a = AT(*a, GET_OCC(*a));
+                    SET_OCC(a, GET_OCC(*a) + (b_end - j) / 2);
+                    while (j != b_end) {
+//                        std::cout << (b_end - j) / 2 << std::endl;
+                        num::ap_int x = num::iMUL(lambda, j);
+//                        std::cout << "multiplied" << std::endl;
+                        num::ASSIGN(it_a, x);
+//                        std::cout << "assigned" << std::endl;
+                        delete[] x;
+//                        std::cout << "deleted x" << std::endl;
+                        j += 2;
+                        it_a += 2;
+                    }
                 }
             }
 
-            void MUL(s_vec v, num::ap_int n) {
+            void MUL(s_ap_int_vec v, num::ap_int n) {
                 for (int i = 0; i < GET_OCC(v); i++) {
                     num::MUL(AT(v, i), n);
                 }
             }
 
-            void MOD(s_vec v) {
+            void MOD(s_ap_int_vec v) {
                 num::ap_int modulus = AT(v, 0);
                 int shift = num::aux::modular::ODDIFY(modulus);
                 int shift_blocks = shift / 64;
@@ -258,8 +369,8 @@ namespace jmaerte {
                 powers.emplace(std::make_pair(2, pow));
                 ULL *remainder = new ULL[shift_blocks + (mask != 0)];
                 for (int i = 1; i < GET_OCC(v); i++) {
-                    if (GET_OCC(AT(v, i)) < GET_OCC(modulus)) continue;
-                    int n = GET_OCC(AT(v, i)) / GET_OCC(modulus) + GET_OCC(AT(v, i)) % GET_OCC(modulus);
+                    if (num::GET_OCC(AT(v, i)) < num::GET_OCC(modulus)) continue;
+                    int n = num::GET_OCC(AT(v, i)) / num::GET_OCC(modulus) + num::GET_OCC(AT(v, i)) % num::GET_OCC(modulus);
                     auto it = powers.find(n);
 
                     // Shift the denominator

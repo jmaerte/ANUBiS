@@ -15,7 +15,7 @@ namespace jmaerte {
             namespace aux {
 
                 static inline ULL aux_mul(ULL* result, ULL val, ULL* a, int l_a, ULL* prod) {
-                    ULL carry;
+                    ULL carry = 0ULL;
                     int j = 0;
                     for (ULL* it = a; it != a + l_a; it++, j++) {
                         set_mul(prod, val, *it);

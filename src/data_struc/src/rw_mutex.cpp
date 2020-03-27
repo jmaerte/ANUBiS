@@ -2,7 +2,7 @@
 // Created by Ina on 08.12.2019.
 //
 
-#include "rw_mutex.hpp"
+#include "../include/data_types/rw_mutex.hpp"
 
 void rw_mutex::lock_read() {
     boost::unique_lock<boost::mutex> lk(shared);

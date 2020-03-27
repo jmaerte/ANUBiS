@@ -168,16 +168,19 @@ namespace jmaerte {
 
                 bool SUB_DATA(ULL* a, ULL* b, int n, int l) {
                     bool sign;
-                    ULL* end_a = a + l;
+                    ULL* end_a = a + l - 1;
                     if (n == l) {
-                        ULL* end_b = b + l;
-                        while (end_a != a && *--end_a == *--end_b) {
+                        ULL* end_b = b + l - 1;
+                        while (l > 0 && *end_a == *end_b) {
                             *end_a = 0ULL;
+                            end_a--;
+                            end_b--;
                             l--;
                         }
-                        if (end_a == a) return false;
-                        sign = *end_a < *end_b;
-                        end_a++;
+                        if (l > 0) {
+                            sign = *end_a < *end_b;
+                            end_a++;
+                        } else return false;
                     } else sign = n > l;
                     ULL carry = SUB_DATA_RANGE(a, b, sign, end_a);
                     // only in case n > l we need to perform the carry...

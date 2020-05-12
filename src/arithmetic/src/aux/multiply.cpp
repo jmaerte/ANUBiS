@@ -34,16 +34,16 @@ namespace jmaerte {
                         unsigned int split = n / 2 + n % 2;
                         ap_int sum_a = iADD_DATA(a, split, a + split, l_a - split);
                         ap_int sum_b = iADD_DATA(b, split, b + split, l_b - split);
-                        SET_OCC(sum_a, GET_OCC(sum_a) + GET_OCC(sum_b) + REC_MUL_DATA(GET_ABS_DATA(sum_a), GET_OCC(sum_a), GET_ABS_DATA(sum_b), GET_OCC(sum_b), 0));
+                        SET_OCC(sum_a, GET_OCC(sum_a) + GET_OCC(sum_b) + REC_MUL_DATA(ABS(sum_a), GET_OCC(sum_a), ABS(sum_b), GET_OCC(sum_b), 0));
                         DELETE(sum_b);
 
                         REC_MUL_DATA(a, split, b, split, shift);
                         int carry = REC_MUL_DATA(a + split, l_a - split, b + split, l_b - split, shift + split);
 
-                        SUB_DATA(GET_ABS_DATA(sum_a), a, GET_OCC(sum_a), 2 * split);
-                        SUB_DATA(GET_ABS_DATA(sum_a), a + 2 * split, GET_OCC(sum_a), l_a + l_b - 1 + carry - 2 * split);
+                        SUB_DATA(ABS(sum_a), a, GET_OCC(sum_a), 2 * split);
+                        SUB_DATA(ABS(sum_a), a + 2 * split, GET_OCC(sum_a), l_a + l_b - 1 + carry - 2 * split);
 
-                        ADD_DATA(a + split, GET_ABS_DATA(sum_a), 2 * split, GET_OCC(sum_a));
+                        ADD_DATA(a + split, ABS(sum_a), 2 * split, GET_OCC(sum_a));
                         DELETE(sum_a);
                         return carry;
                     }
@@ -66,16 +66,16 @@ namespace jmaerte {
                         int split = n / 2 + n % 2;
                         ap_int sum_a = iADD_DATA(a, split, a + split, l_a - split);
                         ap_int sum_b = iADD_DATA(b, split, b + split, l_b - split);
-                        SET_OCC(sum_a, GET_OCC(sum_a) + GET_OCC(sum_b) - 1 + REC_MUL_DATA(GET_ABS_DATA(sum_a), GET_OCC(sum_a), GET_ABS_DATA(sum_b), GET_OCC(sum_b), 0));
+                        SET_OCC(sum_a, GET_OCC(sum_a) + GET_OCC(sum_b) - 1 + REC_MUL_DATA(ABS(sum_a), GET_OCC(sum_a), ABS(sum_b), GET_OCC(sum_b), 0));
                         DELETE(sum_b);
 
                         iREC_MUL_DATA(result, a, split, b, split);
                         int carry = iREC_MUL_DATA(result + 2 * split, a + split, l_a - split, b + split, l_b - split);
 
-                        SUB_DATA(GET_ABS_DATA(sum_a), a, GET_OCC(sum_a), 2 * split);
-                        SUB_DATA(GET_ABS_DATA(sum_a), a + 2 * split, GET_OCC(sum_a), l_a + l_b - 1 + carry - 2 * split);
+                        SUB_DATA(ABS(sum_a), a, GET_OCC(sum_a), 2 * split);
+                        SUB_DATA(ABS(sum_a), a + 2 * split, GET_OCC(sum_a), l_a + l_b - 1 + carry - 2 * split);
 
-                        ADD_DATA(a + split, GET_ABS_DATA(sum_a), 2 * split, GET_OCC(sum_a));
+                        ADD_DATA(a + split, ABS(sum_a), 2 * split, GET_OCC(sum_a));
                         DELETE(sum_a);
                         return carry;
                     }
@@ -103,16 +103,16 @@ namespace jmaerte {
                         int split = n / 2 + n % 2;
                         ap_int sum_a = iADD_DATA(a, split, a + split, l_a - split);
                         ap_int sum_b = iADD_DATA(b, split, b + split, l_b - split);
-                        SET_OCC(sum_a, GET_OCC(sum_a) + GET_OCC(sum_b) + REC_MULL_DATA(GET_ABS_DATA(sum_a), GET_OCC(sum_a), GET_ABS_DATA(sum_b), GET_OCC(sum_b), 0, m - shift - split));
+                        SET_OCC(sum_a, GET_OCC(sum_a) + GET_OCC(sum_b) + REC_MULL_DATA(ABS(sum_a), GET_OCC(sum_a), ABS(sum_b), GET_OCC(sum_b), 0, m - shift - split));
                         DELETE(sum_b);
 
                         REC_MULL_DATA(a, split, b, split, shift, m);
                         int carry = REC_MULL_DATA(a + split, l_a - split, b + split, l_b - split, shift + split, m);
 
-                        SUB_DATA(GET_ABS_DATA(sum_a), a, GET_OCC(sum_a), 2 * split);
-                        SUB_DATA(GET_ABS_DATA(sum_a), a + 2 * split, GET_OCC(sum_a), l_a + l_b - 1 + carry - 2 * split);
+                        SUB_DATA(ABS(sum_a), a, GET_OCC(sum_a), 2 * split);
+                        SUB_DATA(ABS(sum_a), a + 2 * split, GET_OCC(sum_a), l_a + l_b - 1 + carry - 2 * split);
 
-                        ADD_DATA(a + split, GET_ABS_DATA(sum_a), 2 * split, GET_OCC(sum_a));
+                        ADD_DATA(a + split, ABS(sum_a), 2 * split, GET_OCC(sum_a));
                         DELETE(sum_a);
                         return carry;
                     }
@@ -138,16 +138,16 @@ namespace jmaerte {
                         int split = n / 2 + n % 2;
                         ap_int sum_a = iADD_DATA(a, split, a + split, l_a - split);
                         ap_int sum_b = iADD_DATA(b, split, b + split, l_b - split);
-                        SET_OCC(sum_a, GET_OCC(sum_a) + GET_OCC(sum_b) + REC_MULH_DATA(GET_ABS_DATA(sum_a), GET_OCC(sum_a), GET_ABS_DATA(sum_b), GET_OCC(sum_b), 0, m - shift - split));
+                        SET_OCC(sum_a, GET_OCC(sum_a) + GET_OCC(sum_b) + REC_MULH_DATA(ABS(sum_a), GET_OCC(sum_a), ABS(sum_b), GET_OCC(sum_b), 0, m - shift - split));
                         DELETE(sum_b);
 
                         REC_MULH_DATA(a, split, b, split, shift, m);
                         int carry = REC_MULH_DATA(a + split, l_a - split, b + split, l_b - split, shift + split, m);
 
-                        SUB_DATA(GET_ABS_DATA(sum_a), a, GET_OCC(sum_a), 2 * split);
-                        SUB_DATA(GET_ABS_DATA(sum_a), a + 2 * split, GET_OCC(sum_a), l_a + l_b - 1 + carry - 2 * split);
+                        SUB_DATA(ABS(sum_a), a, GET_OCC(sum_a), 2 * split);
+                        SUB_DATA(ABS(sum_a), a + 2 * split, GET_OCC(sum_a), l_a + l_b - 1 + carry - 2 * split);
 
-                        ADD_DATA(a + split, GET_ABS_DATA(sum_a), 2 * split, GET_OCC(sum_a));
+                        ADD_DATA(a + split, ABS(sum_a), 2 * split, GET_OCC(sum_a));
                         DELETE(sum_a);
                         return carry;
                     }
@@ -173,16 +173,16 @@ namespace jmaerte {
                         int split = n / 2 + n % 2;
                         ap_int sum_a = iADD_DATA(a, split, a + split, l_a - split);
                         ap_int sum_b = iADD_DATA(b, split, b + split, l_b - split);
-                        SET_OCC(sum_a, GET_OCC(sum_a) + GET_OCC(sum_b) + REC_MULL_DATA(GET_ABS_DATA(sum_a), GET_OCC(sum_a), GET_ABS_DATA(sum_b), GET_OCC(sum_b), 0, m - shift - split));
+                        SET_OCC(sum_a, GET_OCC(sum_a) + GET_OCC(sum_b) + REC_MULL_DATA(ABS(sum_a), GET_OCC(sum_a), ABS(sum_b), GET_OCC(sum_b), 0, m - shift - split));
                         DELETE(sum_b);
 
                         iREC_MULL_DATA(result, a, split, b, split, shift, m);
                         int carry = iREC_MULL_DATA(result + 2 * split, a + split, l_a - split, b + split, l_b - split, shift + 2 * split, m);
 
-                        SUB_DATA(GET_ABS_DATA(sum_a), a, GET_OCC(sum_a), 2 * split);
-                        SUB_DATA(GET_ABS_DATA(sum_a), a + 2 * split, GET_OCC(sum_a), l_a + l_b - 1 + carry - 2 * split);
+                        SUB_DATA(ABS(sum_a), a, GET_OCC(sum_a), 2 * split);
+                        SUB_DATA(ABS(sum_a), a + 2 * split, GET_OCC(sum_a), l_a + l_b - 1 + carry - 2 * split);
 
-                        ADD_DATA(a + split, GET_ABS_DATA(sum_a), 2 * split, GET_OCC(sum_a));
+                        ADD_DATA(a + split, ABS(sum_a), 2 * split, GET_OCC(sum_a));
                         DELETE(sum_a);
                         return carry;
                     }
@@ -234,15 +234,15 @@ namespace jmaerte {
                     } else {
                         unsigned int k = n / 2 + n % 2;
                         ap_int sum = iADD_DATA(dat, k, dat + k, n - k);
-                        SET_OCC(sum, 2 * GET_OCC(sum) + REC_SQR_DATA(GET_ABS_DATA(sum), GET_OCC(sum), 0));
+                        SET_OCC(sum, 2 * GET_OCC(sum) + REC_SQR_DATA(ABS(sum), GET_OCC(sum), 0));
 
                         REC_SQR_DATA(dat, k, shift);
                         int carry = REC_SQR_DATA(dat + k, n - k, shift + k);
 
-                        SUB_DATA(GET_ABS_DATA(sum), dat, GET_OCC(sum), 2 * k);
-                        SUB_DATA(GET_ABS_DATA(sum), dat + 2 * k, GET_OCC(sum), 2 * n - 1 + carry - 2 * k);
+                        SUB_DATA(ABS(sum), dat, GET_OCC(sum), 2 * k);
+                        SUB_DATA(ABS(sum), dat + 2 * k, GET_OCC(sum), 2 * n - 1 + carry - 2 * k);
 
-                        ADD_DATA(dat + k, GET_ABS_DATA(sum), 2 * k, GET_OCC(sum));
+                        ADD_DATA(dat + k, ABS(sum), 2 * k, GET_OCC(sum));
                         DELETE(sum);
                         return carry;
                     }
@@ -294,15 +294,15 @@ namespace jmaerte {
                     } else {
                         unsigned int k = n / 2 + n % 2;
                         ap_int sum = iADD_DATA(dat, k, dat + k, n - k);
-                        SET_OCC(sum, 2 * GET_OCC(sum) - 1 + REC_SQR_DATA(GET_ABS_DATA(sum), GET_OCC(sum), 0));
+                        SET_OCC(sum, 2 * GET_OCC(sum) - 1 + REC_SQR_DATA(ABS(sum), GET_OCC(sum), 0));
 
                         iREC_SQR_DATA(result, dat, n);
                         int carry = iREC_SQR_DATA(result, dat + k, n - k);
 
-                        SUB_DATA(GET_ABS_DATA(sum), dat, GET_OCC(sum), 2 * k);
-                        SUB_DATA(GET_ABS_DATA(sum), dat + 2 * k, GET_OCC(sum), 2 * n - 1 + carry - 2 * k);
+                        SUB_DATA(ABS(sum), dat, GET_OCC(sum), 2 * k);
+                        SUB_DATA(ABS(sum), dat + 2 * k, GET_OCC(sum), 2 * n - 1 + carry - 2 * k);
 
-                        ADD_DATA(dat + k, GET_ABS_DATA(sum), 2 * k, GET_OCC(sum));
+                        ADD_DATA(dat + k, ABS(sum), 2 * k, GET_OCC(sum));
                         DELETE(sum);
                         return carry;
                     }

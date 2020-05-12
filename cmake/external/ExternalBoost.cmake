@@ -13,8 +13,11 @@ ELSEIF(UNIX)
     set(BOOST_BOOTSTRAP_COMMAND ./bootstrap.sh)
     set(BOOST_B2_COMMAND ./b2)
 ENDIF()
-
-set(BOOST_URL "https://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_${BOOST_UNDERSCORE_VERSION}.${BOOST_COMPRESSION}")
+IF(DEFINED BOOST_PATH)
+    set(BOOST_URL ${BOOST_PATH})
+ELSE()
+    set(BOOST_URL "https://dl.bintray.com/boostorg/release/${BOOST_VERSION}/source/boost_${BOOST_UNDERSCORE_VERSION}.${BOOST_COMPRESSION}")
+ENDIF()
 
 if (WIN32)
     set(BOOST_TOOLSET ${BOOST_WIN32_COMPILER})
@@ -65,22 +68,22 @@ ExternalProject_Add(
         URL_HASH 			SHA256=${BOOST_SHA256}
         BUILD_IN_SOURCE 	1
         CONFIGURE_COMMAND 	${BOOST_BOOTSTRAP_COMMAND}
-                            ${BOOST_LIBRARIES_WITH}                 # this declares the used libraries on unix
+        ${BOOST_LIBRARIES_WITH}                 # this declares the used libraries on unix
         BUILD_COMMAND 		${BOOST_B2_COMMAND}
-                                ${BOOST_TOOLSET}                    # toolset to use (mingw,...)
-                                -q                                  # QUIET
-                                -j8                                 # 8 THREADS
-#                                --abbreviate-paths                 # ON SOME SYSTEMS CMAKE CANT HANDLE LONG PATHS
-                                variant=${BOOST_CONF_VARIANT}
-                                --enable-pic                        # needed on windows for position independent code
-                                threading=${BOOST_THREADING}                 # threading
-                                link=${BOOST_LINK}                  # shared or static linking
-                                runtime-link=${BOOST_RUNTIME_LINK}  # shared or static runtime linking
-                                cxxflags=-fPIC
-                                cflags=-fPIC
-                                linkflags=-fPIC
-                                address-model=${ARCHITECTURE}
-                                ${BOOST_LIBRARIES_ADD}              # this declares the used libraries on windows
+        ${BOOST_TOOLSET}                    # toolset to use (mingw,...)
+        -q                                  # QUIET
+        -j8                                 # 8 THREADS
+        #                                --abbreviate-paths                 # ON SOME SYSTEMS CMAKE CANT HANDLE LONG PATHS
+        variant=${BOOST_CONF_VARIANT}
+        --enable-pic                        # needed on windows for position independent code
+        threading=${BOOST_THREADING}                 # threading
+        link=${BOOST_LINK}                  # shared or static linking
+        runtime-link=${BOOST_RUNTIME_LINK}  # shared or static runtime linking
+        cxxflags=-fPIC
+        cflags=-fPIC
+        linkflags=-fPIC
+        address-model=${ARCHITECTURE}
+        ${BOOST_LIBRARIES_ADD}              # this declares the used libraries on windows
         INSTALL_COMMAND 	    "")
 
 

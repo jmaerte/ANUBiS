@@ -8,7 +8,7 @@
 typedef unsigned long long ULL;
 
 namespace jmaerte {
-    namespace arithmetic {
+    namespace arith {
         namespace constants {
             extern const int BYTES_PER_ULL;
             extern const int ULL_SIZE;
@@ -18,26 +18,22 @@ namespace jmaerte {
             extern const ULL ULL_MAX;
             extern const ULL UI_MAX;
             extern const ULL BASE;
-            extern const ULL FIFTEEN
+            extern const ULL FIFTEEN;
         }
         namespace num {
-
-            namespace constants {
-                extern const ULL SIGN_MASK;
-                extern const ULL SINGLE_MASK;
-                extern const ULL POS_MASK;
-                extern const ULL SIZE_MASK;
-                extern const ULL OCC_MASK;
-                extern const ULL MASKS[2];
-            }
+            extern const ULL SIGN_MASK;
+            extern const ULL SINGLE_MASK;
+            extern const ULL POS_MASK;
+            extern const ULL SIZE_MASK;
+            extern const ULL OCC_MASK;
+            extern const ULL MASKS[2];
         }
 
         namespace vec {
-            namespace constants {
-                extern const ULL ALL_SINGLE_MASK;
-                extern const ULL SIZE_MASK;
-                extern const ULL OCC_MASK;
-            }
+            extern const ULL ALL_SINGLE_MASK;
+            extern const ULL FACTORY_ID_MASK;
+            extern const ULL SIZE_MASK;
+            extern const ULL OCC_MASK;
         }
     }
 }

@@ -178,5 +178,5 @@ private:
     std::mutex push_mutex;
 };
 
-#include "thread_pool.cpp"
+#include "../../src/thread_pool.cpp"
 #endif //ANUBIS_PROJECT_THREAD_POOL_HPP

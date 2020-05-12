@@ -40,7 +40,7 @@ namespace jmaerte {
                     for (int j = m; j > 0; j--) {
                         curr_a_leading = aux::GET(a, j);
                         curr_a_second = aux::GET(a, j - 1);
-                        if (curr_a_leading == leading) q = ULL_MAX;
+                        if (curr_a_leading == leading) q = constants::ULL_MAX;
                         else q = udiv(curr_a_leading, curr_a_second, leading, &rem);
 
                         if (DIV_TEST(prod_leading, prod_second, leading, second, q, curr_a_leading, curr_a_second, aux::GET(a, j - 2))) {

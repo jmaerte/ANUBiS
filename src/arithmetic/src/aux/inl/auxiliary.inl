@@ -26,11 +26,11 @@ namespace jmaerte {
 
                 static inline ULL GET(ap_int n, int pos) {
                     if (pos < 0 || pos >= GET_OCC(n)) return 0ULL;
-                    return *(GET_ABS_DATA(n) + pos);
+                    return *(ABS(n) + pos);
                 }
 
                 static inline ULL GET_LEADING(ap_int const n) {
-                    return *(GET_ABS_DATA(n) + GET_OCC(n) - 1);
+                    return *(ABS(n) + GET_OCC(n) - 1);
                 }
 
                 static inline void REMOVE(ap_int n, int i) {
@@ -88,9 +88,9 @@ namespace jmaerte {
                  */
                 static inline ap_int TRUNCATE(ap_int a, ULL n) {
                     ap_int hi = NEW(GET_OCC(a) - n, GET_SIGN(a), 0ULL);
-                    std::memcpy(GET_ABS_DATA(a) + n, GET_ABS_DATA(hi), GET_OCC(a) - n);
-                    (a + 1)->value = (ULL*) realloc(GET_ABS_DATA(a), n * BYTES_PER_ULL);
-                    STRIP(GET_ABS_DATA(a), n);
+                    std::memcpy(ABS(a) + n, ABS(hi), GET_OCC(a) - n);
+                    (a + 1)->value = (ULL*) realloc(ABS(a), n * constants::BYTES_PER_ULL);
+                    STRIP(ABS(a), n);
                     SET_OCC(a, n);
                 }
             }

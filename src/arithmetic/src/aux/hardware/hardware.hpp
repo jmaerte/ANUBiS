@@ -13,16 +13,27 @@ typedef unsigned long long ULL;
 
 #ifdef __SIZEOF_INT128__     // GNU C
 #include <immintrin.h>
-#define adc _addcarry_u64;
-    static const unsigned __int128 ULL_MASK = (unsigned __int128) ULL_MAX;
+    static const unsigned __int128 ULL_MASK = (unsigned __int128) (-1ULL);
+
+    static inline unsigned char adc(unsigned char c_in, ULL a, ULL b, ULL* res) {
+        unsigned char c_out;
+        b += c_in;
+        *res = a + b;
+        return (b < c_in) || (*res < b);
+    }
+    static inline ULL mul(ULL a, ULL b, ULL* overflow) {
+        unsigned __int128 prod =  a * (unsigned __int128)b;
+        *overflow = prod >> 64;
+        return (ULL) prod;
+    }
     static inline void add_mul(ULL* mem, ULL a, ULL b) {
          unsigned __int128 prod =  a * (unsigned __int128)b;
-         *mem++ += prod & ULL_MAX;
+         *mem++ += prod & ULL_MASK;
          *mem += prod >> 64;
     }
     static inline void set_mul(ULL* mem, ULL a, ULL b) {
          unsigned __int128 prod =  a * (unsigned __int128)b;
-         *mem++ = prod & ULL_MAX;
+         *mem++ = prod & ULL_MASK;
          *mem = prod >> 64;
     }
     static inline ULL mulh(ULL a, ULL b) {
@@ -31,7 +42,7 @@ typedef unsigned long long ULL;
     }
     static inline void set_div(ULL* mem, ULL a_hi, ULL a_lo, ULL b) {
          unsigned __int128 div = (((unsigned __int128)a_hi) << 64 | ((unsigned __int128)a_lo)) / b;
-        *mem = div & ULL_MAX;
+        *mem = div & ULL_MASK;
     }
     static inline ULL udiv(ULL high, ULL low, ULL div, ULL* remainder) {
         unsigned __int128 denom = (((unsigned __int128)high) << 64 | ((unsigned __int128)low));
@@ -44,6 +55,7 @@ typedef unsigned long long ULL;
     #define adc _addcarry_u64
     #define mulh __umulh
     #define udiv _udiv128
+    #define mul _umul128
     static inline void add_mul(ULL* mem, ULL a, ULL b) {
         *mem++ += a * b;
         *mem += mulh(a, b);
@@ -61,6 +73,7 @@ typedef unsigned long long ULL;
 #include <intrin.h>
     #define adc _addcarry_u64
     #define udiv _udiv128
+    #define mul _umul128
     static inline void add_mul(ULL* mem, ULL a, ULL b) {
         *mem += _umul128(a, b, mem + 1);
     }

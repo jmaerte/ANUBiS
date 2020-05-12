@@ -21,7 +21,7 @@ namespace jmaerte {
 
                     int ODDIFY(ap_int N) {
                         int shift = 0;
-                        ULL* arr = GET_ABS_DATA(N);
+                        ULL* arr = ABS(N);
                         ULL value;
                         for (int i = 0; i < GET_OCC(N); i++) {
                             if(!(value = *(arr + i))) shift += 64;
@@ -114,11 +114,11 @@ namespace jmaerte {
                         int len_a = GET_OCC(a), len_N = GET_OCC(N);
                         int n = len_a / len_N; // ceil
 
-                        ULL* data = GET_ABS_DATA(a);
+                        ULL* data = ABS(a);
 
                         ULL* rem = data;
-                        REC_MULL_DATA(rem, len_N, GET_ABS_DATA(N_inv), GET_OCC(N_inv), 0, len_N);
-                        REC_MULH_DATA(rem, len_N, GET_ABS_DATA(N), GET_OCC(N), 0, len_N);
+                        REC_MULL_DATA(rem, len_N, ABS(N_inv), GET_OCC(N_inv), 0, len_N);
+                        REC_MULH_DATA(rem, len_N, ABS(N), GET_OCC(N), 0, len_N);
 
                         data += len_N;
 
@@ -127,9 +127,9 @@ namespace jmaerte {
                         for (int i = 1; i < n; i++) {
                             borrow = COMPARE_RAW(rem + len_N, data + len_N, len_N);
                             (void)SUB_DATA_RANGE(rem, data, true, rem + len_N); // ignore borrow of this subtraction
-                            REC_MULL_DATA(rem, len_N, GET_ABS_DATA(N_inv), GET_OCC(N_inv), 0, len_N);
+                            REC_MULL_DATA(rem, len_N, ABS(N_inv), GET_OCC(N_inv), 0, len_N);
                             if (borrow) ADD_DATA_RANGE(rem, &one, &one + 1);
-                            REC_MULH_DATA(rem, len_N, GET_ABS_DATA(N), GET_OCC(N), 0, len_N);
+                            REC_MULH_DATA(rem, len_N, ABS(N), GET_OCC(N), 0, len_N);
                             data += len_N;
                         }
                         if (n * len_N < len_a) {
@@ -147,7 +147,7 @@ namespace jmaerte {
                                 len++;
                             }
                             if (len > occ) occ = len;
-                            REC_MULL_DATA(rem, occ, GET_ABS_DATA(N_inv), GET_OCC(N_inv), 0, len_N);
+                            REC_MULL_DATA(rem, occ, ABS(N_inv), GET_OCC(N_inv), 0, len_N);
                             if (borrow) {
                                 carry = ADD_DATA_RANGE(rem, &one, rem + 1);
                                 len = 1;
@@ -158,7 +158,7 @@ namespace jmaerte {
                                 }
                                 if (len > occ) occ = len;
                             }
-                            REC_MULH_DATA(rem, occ, GET_ABS_DATA(N), GET_OCC(N), 0, len_N);
+                            REC_MULH_DATA(rem, occ, ABS(N), GET_OCC(N), 0, len_N);
                         }
                         if (GET_OCC(a)) {
                             num::SUB(a, N);

@@ -23,7 +23,7 @@ int main() {
 //    auto c = jmaerte::anubis::s_tree::from_file(getenv("HOME") + slash + "Downloads" + slash + "c88");
 //
 //
-    auto c = jmaerte::anubis::s_list::from_file(getenv("HOME") + slash + "Downloads" + slash + "c88");
+    auto c = jmaerte::anubis::s_list::from_file(getenv("HOME") + slash + "Downloads" + slash + "outtorsion");
 
 //
 //    std::vector<double> spec = c->laplacian_spectrum(0);
@@ -43,7 +43,8 @@ int main() {
 //    for (auto i : c->f_vector()) {
 //        std::cout << i << std::endl;
 //    }
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
+        std::cout << "CALCULATING HOMOLOGY OF DIMENSION " << i << "!" << std::endl;
         auto m = c->homology(i);
         if (i > 0) c->clear_dim(i - 1);
         std::cout << "HOMOLOGY DIM " << i << std::endl;

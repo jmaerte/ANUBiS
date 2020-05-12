@@ -38,6 +38,10 @@ namespace jmaerte {
                 //auxiliary.cpp
                 void     SET(ap_int n, int pos, ULL val);
                 void     ADD(ap_int a, ULL lambda, int shift, ap_int const b);
+                void     C_ADD(ap_int a, ULL b);
+                void     C_SUB(ap_int a, ULL b);
+                bool     iC_MUL(ap_int coeff, ap_int a, ap_int* dest);
+                bool     iC_A_MUL(ap_int coeff, ap_int a, ap_int* dest);
                 void     SUB(ap_int a, ULL lambda, int shift, ap_int const b);
                 ap_int   iADD_DATA(ULL* a, int l_a, ULL* b, int l_b);
                 int      ADD_DATA(ULL* a, ULL* b, int n, int l);

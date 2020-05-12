@@ -12,10 +12,14 @@ typedef unsigned long long ULL;
 /**
  * This union has 64 bits. It can serve either as an pointer to a memory block of ULLs or as an ULL of meta-data itself.
  */
-union svec_node {
-    ULL meta;
-    ULL * value;
-};
+namespace jmaerte {
+    namespace arith {
+        union svec_node {
+            ULL single;
+            ULL * value;
+        };
+    }
+}
 
 /**
  * A number is a memory block of two svec_nodes:

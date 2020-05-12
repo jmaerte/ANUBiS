@@ -2,7 +2,7 @@
 // Created by Ina on 08.12.2019.
 //
 
-#include "thread_pool.hpp"
+#include "../include/data_types/thread_pool.hpp"
 
 template<typename F, typename... Args>
 auto thread_pool::add_job(F &&fn, Args &&... args) -> boost::unique_future<typename boost::result_of<F(Args...)>::type> {

@@ -9,6 +9,9 @@
 
 namespace jmaerte {
     namespace arith {
+
+        double ELAPSED;
+
         namespace num {
             /*
              * COMPARATORS
@@ -17,13 +20,13 @@ namespace jmaerte {
             int COMPARE_ABS(ap_int const n_a, ap_int const n_b) {
                 int occ = GET_OCC(n_a);
                 if (occ != GET_OCC(n_b)) return occ - GET_OCC(n_b);
-                auto a = GET_ABS_DATA(n_a) + occ;
-                auto b = GET_ABS_DATA(n_b) + occ;
+                auto a = ABS(n_a) + occ;
+                auto b = ABS(n_b) + occ;
                 return aux::COMPARE_RAW(a, b, occ);
             }
 
             bool comp::SIGNED_COMPARATOR::operator()(ap_int const &a, ap_int const &b) const {
-                if ((a->meta ^ b->meta) & NUM_SIGN_MASK) return GET_SIGN(a) ? b : a;
+                if ((a->single ^ b->single) & num::SIGN_MASK) return GET_SIGN(a) ? b : a;
                 return !((COMPARE_ABS(a, b) < 0) ^ GET_SIGN(a));
             }
 
@@ -39,7 +42,7 @@ namespace jmaerte {
                 int start = shift / 64;
                 shift %= 64;
                 int next_shift = 64 - shift;
-                ULL *arr = GET_ABS_DATA(n);
+                ULL *arr = ABS(n);
                 int end = GET_OCC(n);
                 for (int i = 0; i < end - start - 1; i++) {
                     *(arr + i) = (*(arr + i + start) >> shift) | (*(arr + i + start + 1) << next_shift);
@@ -53,7 +56,7 @@ namespace jmaerte {
                 shift %= 64;
                 int next_shift = 64 - shift;
                 ENLARGE(n, GET_OCC(n) + start + 1);
-                ULL *arr = GET_ABS_DATA(n);
+                ULL *arr = ABS(n);
                 int end = GET_OCC(n);
                 for (int i = end - 1; i > 0; i--) {
                     *(arr + start + i) = (*(arr + i) << shift) | (*(arr + i - 1) >> next_shift);
@@ -66,7 +69,7 @@ namespace jmaerte {
 
             void LSHIFT_BLOCK(ap_int n, int blocks) {
                 ENLARGE(n, GET_OCC(n) + blocks);
-                ULL *arr = GET_ABS_DATA(n);
+                ULL *arr = ABS(n);
                 int size = GET_OCC(n);
                 std::copy_backward(arr, arr + size, arr + size + blocks);
                 for (int i = 0; i < blocks; i++) *(arr + i) = 0ULL;
@@ -95,15 +98,15 @@ namespace jmaerte {
 
                 int occ = GET_OCC(a) + GET_OCC(b);
                 ULL *result = new ULL[occ] { };
-                occ -= 1 - aux::iREC_MUL_DATA(result, GET_ABS_DATA(a), GET_OCC(a), GET_ABS_DATA(b), GET_OCC(b));
+                occ -= 1 - aux::iREC_MUL_DATA(result, ABS(a), GET_OCC(a), ABS(b), GET_OCC(b));
                 return NEW(result, GET_OCC(a) + GET_OCC(b), occ, GET_SIGN(a) ^ GET_SIGN(b));
             }
 
             void iMUL(ap_int dest, ap_int a, ap_int b) {
                 int occ = GET_OCC(a) + GET_OCC(b);
                 ULL *result = new ULL[occ] { };
-                occ -= 1 - aux::iREC_MUL_DATA(result, GET_ABS_DATA(a), GET_OCC(a), GET_ABS_DATA(b), GET_OCC(b));
-                *dest = {.meta = ((GET_SIGN(a) ^ GET_SIGN(b)) ? NUM_SIGN_MASK : 0ULL) | (((GET_OCC(a) + GET_OCC(b)) & LL_MASK) << 16) | (ULL) occ};
+                occ -= 1 - aux::iREC_MUL_DATA(result, ABS(a), GET_OCC(a), ABS(b), GET_OCC(b));
+                *dest = (svec_node){.single = ((GET_SIGN(a) ^ GET_SIGN(b)) ? num::SIGN_MASK : 0ULL) | (((GET_OCC(a) + GET_OCC(b)) & constants::LL_MASK) << 16) | (ULL) occ};
                 *(dest + 1) = (svec_node){.value = result};
             }
 
@@ -113,8 +116,8 @@ namespace jmaerte {
 
                 ENLARGE(a, n_a + n_b);
 
-                ULL *dat_a = GET_ABS_DATA(a);
-                ULL *dat_b = GET_ABS_DATA(b);
+                ULL *dat_a = ABS(a);
+                ULL *dat_b = ABS(b);
 
                 n_a -= 1 - aux::REC_MUL_DATA(dat_a, n_a, dat_b, n_b, 0);
 
@@ -125,7 +128,7 @@ namespace jmaerte {
             void SQR(ap_int a) {
                 int n = GET_OCC(a);
                 ENLARGE(a);
-                ULL *dat = GET_ABS_DATA(a);
+                ULL *dat = ABS(a);
 
                 n -= 1 - aux::REC_SQR_DATA(dat, n, 0);
 
@@ -136,7 +139,7 @@ namespace jmaerte {
             ap_int iSQR(ap_int a) {
                 int n = GET_OCC(a);
                 ULL *result = new ULL[2 * n] { };
-                ULL *dat = GET_ABS_DATA(a);
+                ULL *dat = ABS(a);
                 int occ = 2 * n - 1 + aux::iREC_SQR_DATA(result, dat, n);
                 return NEW(result, 2 * n, occ, false);
             }
@@ -146,7 +149,7 @@ namespace jmaerte {
                     return iMUL(b, a);
                 }
                 ULL *result = new ULL[n] { };
-                aux::iREC_MULL_DATA(result, GET_ABS_DATA(a), GET_OCC(a), GET_ABS_DATA(b), GET_OCC(b), 0, n);
+                aux::iREC_MULL_DATA(result, ABS(a), GET_OCC(a), ABS(b), GET_OCC(b), 0, n);
                 ULL occ = n;
                 aux::STRIP(result, occ);
                 return NEW(result, n, occ, GET_SIGN(a) ^ GET_SIGN(b));
@@ -158,8 +161,8 @@ namespace jmaerte {
 
                 ENLARGE(a, n);
 
-                ULL *dat_a = GET_ABS_DATA(a);
-                ULL *dat_b = GET_ABS_DATA(b);
+                ULL *dat_a = ABS(a);
+                ULL *dat_b = ABS(b);
 
                 aux::REC_MULL_DATA(dat_a, n_a, dat_b, n_b, 0, n);
 
@@ -174,8 +177,8 @@ namespace jmaerte {
 
                 ENLARGE(a, n);
 
-                ULL *dat_a = GET_ABS_DATA(a);
-                ULL *dat_b = GET_ABS_DATA(b);
+                ULL *dat_a = ABS(a);
+                ULL *dat_b = ABS(b);
 
                 aux::REC_MULH_DATA(dat_a, n_a, dat_b, n_b, 0, n);
 
@@ -194,7 +197,7 @@ namespace jmaerte {
             int FIND_POS(s_ap_int_vec v, int pos) {
                 int occ = GET_OCC(v);
                 if (occ == 0 || num::GET_POS(AT(v, occ - 1)) < pos) return occ;
-                if (num::GET_POS(AT(v, 0)) < pos) return 0;
+                if (num::GET_POS(AT(v, 0)) > pos) return 0;
                 int min = 0;
                 int max = occ;
                 int compare = 0;
@@ -207,59 +210,180 @@ namespace jmaerte {
                 return min;
             }
 
-            void PUT(s_ap_int_vec* v, num::ap_int n) {
-                int k = FIND_POS(*v, num::GET_POS(n));
-                if (GET_SIZE(*v) <= GET_OCC(*v)) {
+            void PUT(s_ap_int_vec& v, num::ap_int n) {
+                int k = FIND_POS(v, num::GET_POS(n));
+                if (GET_SIZE(v) <= GET_OCC(v)) {
                     ENLARGE(v);
                 }
-                if (k < GET_OCC(*v)) {
-                    std::copy_backward(AT(*v, k), AT(*v, GET_OCC(*v)), AT(*v, GET_OCC(*v) + 2));
+                if (k < GET_OCC(v)) {
+                    std::copy_backward(AT(v, k), AT(v, GET_OCC(v)), AT(v, GET_OCC(v) + 2));
                 }
                 SET(v, k, n);
-                SET_OCC(v, GET_OCC(*v) + 1);
+                SET_OCC(v, GET_OCC(v) + 1);
             }
 
             /*
              * ARITHMETIC
              */
 
-            void REDUCE(s_ap_int_vec* a, s_ap_int_vec b, int k) {
-                num::ap_int a_end = AT(*a, GET_OCC(*a));
+            /**
+             * Addition function exclusively for vectors where every entry is a single.
+             * @param a
+             * @param start_a
+             * @param lambda_num
+             * @param b
+             * @param start_b
+             */
+            void ADD_ALL_SINGLE(s_ap_int_vec& a, int start_a, num::ap_int lambda_num, s_ap_int_vec b, int start_b) {
+//                std::cout << "add all single " << GET_OCC(b) << std::endl;
+                ULL occ = GET_OCC(a);
                 num::ap_int b_end = AT(b, GET_OCC(b));
 
-                num::ap_int it_a = AT(*a, k + 1);
-                num::ap_int j = AT(b, 1);
+                s_ap_int_vec a_cpy = new svec_node[2 * (occ - start_a)];
+                std::copy(vec::AT(a, start_a), vec::AT(a, occ), a_cpy);
+                num::ap_int cpy_end = a_cpy + 2 * (occ - start_a);
 
-                for (int i = k + 1; i < GET_OCC(*a) && j != b_end;) {
-//                    std::cout << num::GET_POS(it_a) << " " << num::GET_POS(j) << std::endl;
-//                    std::cout << "i: " << i << ", occ: " << GET_OCC(*a) << ", size: " << GET_SIZE(*a) << std::endl;
-                    if (num::GET_POS(it_a) < num::GET_POS(j)) {
+                bool multi = false;
+
+                ULL lambda = (lambda_num + 1)->single;
+                bool lambda_sign = num::GET_SIGN(lambda_num);
+
+                num::ap_int it = AT(a, start_a);
+                num::ap_int it_cpy = a_cpy;
+                num::ap_int j = AT(b, start_b);
+                ULL pos_a, pos_b;
+                ULL overflow;
+
+                occ = start_a;
+                for (; it_cpy != cpy_end && j != b_end; occ++) {
+//                    std::cout << i << " " << (b_end - j) / 2 << std::endl;
+                    if ((pos_a = (it_cpy)->single >> 2) < (pos_b = j->single >> 2)) {
+                        it->single = it_cpy->single;
+                        (it+1)->single = (it_cpy+1)->single;
+                        it += 2;
+                        it_cpy += 2;
+                    } else if (pos_a > pos_b) {
+                        if (occ + 1 > GET_SIZE(a)) {
+                            ENLARGE_RANGE(a, occ);
+                            it = AT(a, occ);
+                        }
+//                        std::copy_backward(it, a_end, a_end + 2);
+                        *it = (svec_node){.single = 1ULL | (num::GET_SIGN(j) ^ lambda_sign ? 1ULL : 0ULL) << 1 | pos_b << 2};
+                        *(it + 1) = (svec_node){.single = mul((j + 1)->single, lambda, &overflow)};
+                        if (overflow) {
+                            num::MAKE_MULTI(it, overflow);
+                            multi = true;
+                        }
+                        j += 2;
+                        it += 2;
+                    } else {
+                        ULL x = mul(lambda, (j + 1)->single, &overflow);
+                        bool sign = lambda_sign ^ num::GET_SIGN(j);
+                        if (sign ^ num::GET_SIGN(it_cpy)) {
+                            if (overflow) {
+                                num::SWITCH_SIGN(it_cpy);
+                                if (x < (it_cpy + 1)->single) {
+                                    overflow--;
+                                }
+                                (it_cpy + 1)->single = x - (it_cpy + 1)->single;
+                            } else {
+                                if ((it_cpy + 1)->single < x) {
+                                    num::SWITCH_SIGN(it_cpy);
+                                    (it_cpy + 1)->single = x - (it_cpy + 1)->single;
+                                } else (it_cpy + 1)->single -= x;
+                            }
+                        } else overflow += adc(0, (it_cpy + 1)->single, x, &(it_cpy + 1)->single); // can't overflow itself
+                        if (overflow) {
+                            num::MAKE_MULTI(it_cpy, overflow);
+                            multi = true;
+                        } else if ((it_cpy + 1)->single == 0ULL) {
+                            occ--;
+                            j += 2;
+                            it_cpy += 2;
+                            continue;
+                        }
+                        *it = *it_cpy;
+                        *(it + 1) = *(it_cpy + 1);
+                        it += 2;
+                        j += 2;
+                        it_cpy += 2;
+                    }
+                }
+
+                while(it_cpy != cpy_end) {
+                    if (occ + 1 > GET_SIZE(a)) {
+                        ENLARGE_RANGE(a, occ);
+                        it = AT(a, occ);
+                    }
+                    it->single = it_cpy->single;
+                    (it + 1)->single = (it_cpy + 1)->single;
+                    it += 2;
+                    it_cpy += 2;
+                    occ++;
+                }
+                while(j != b_end) {
+                    if (occ + 1 > GET_SIZE(a)) {
+                        ENLARGE_RANGE(a, occ);
+                        it = AT(a, occ);
+                    }
+                    pos_b = j->single >> 2;
+                    *it = (svec_node){.single = 1ULL | (num::GET_SIGN(j) ^ lambda_sign ? 1ULL : 0ULL) << 1 | pos_b << 2};
+                    *(it + 1) = (svec_node){.single = mul((j + 1)->single, lambda, &overflow)};
+                    if (overflow) {
+                        num::MAKE_MULTI(it, overflow);
+                        multi = true;
+                    }
+                    j += 2;
+                    it += 2;
+                    occ++;
+                }
+
+                delete[] a_cpy;
+
+                // update vector flags:
+                SET_OCC(a, occ);
+                if (multi) a->single &= ~vec::ALL_SINGLE_MASK;
+            }
+
+            /**
+             * Addition function exclusively for b being a vector where every entry is a single.
+             * @param a
+             * @param start_a
+             * @param lambda_num
+             * @param b
+             * @param start_b
+             */
+            void ADD_SINGLE(s_ap_int_vec& a, int start_a, num::ap_int lambda, s_ap_int_vec b, int start_b) {
+                num::ap_int a_end = AT(a, GET_OCC(a));
+                num::ap_int b_end = AT(b, GET_OCC(b));
+
+                num::ap_int it_a = AT(a, start_a);
+                num::ap_int j = AT(b, start_b);
+
+                ULL pos_a, pos_b;
+                ULL occ = GET_OCC(a);
+                for (int i = start_a; i < occ && j != b_end;) {
+                    if ((pos_a = num::GET_POS(it_a)) < (pos_b = j->single >> 2)) {
                         i++;
                         it_a += 2;
-                    } else if (num::GET_POS(it_a) > num::GET_POS(j)) {
-                        if (GET_OCC(*a) + 1 > GET_SIZE(*a)) {
+                    } else if (pos_a > pos_b) {
+                        if (occ + 1 > GET_SIZE(a)) {
                             ENLARGE(a);
-                            it_a = AT(*a, i);
-                            a_end = AT(*a, GET_OCC(*a));
+                            it_a = AT(a, i);
+                            a_end = AT(a, occ);
                         }
                         // copy j and j + 1 into a.
                         std::copy_backward(it_a, a_end, a_end + 2);
-                        num::iMUL(it_a, AT(*a, k), j);
-                        num::SET_POS(it_a, num::GET_POS(j));
-                        SET_OCC(a, GET_OCC(*a) + 1);
+                        num::aux::iC_MUL(j, lambda, &it_a);
+                        num::SET_POS(it_a, pos_b);
+                        occ++;
                         a_end += 2;
                         j += 2;
                     } else {
-//                        if (num::GET_OCC(AT(*a, k)) == 1) {
-//                            if (num::GET_SIGN(AT(*a, k))) num::aux::SUB(it_a, *(num::GET_ABS_DATA(AT(*a, k))), 0, j);
-//                            else num::aux::ADD(it_a, *(num::GET_ABS_DATA(AT(*a, k))), 0, j);
-//                        } else {
-                            num::ap_int x = num::iMUL(AT(*a, k), j);
-                            num::ADD(it_a, x);
-                            num::DELETE(x);
-//                        }
+                        num::aux::iC_A_MUL(j, lambda, &it_a);
                         if (num::GET_OCC(it_a) == 0) {
-                            DELETE_POS(*a, i);
+                            num::DELETE_DATA(it_a);
+                            std::copy(AT(a, i + 1), AT(a, occ--), AT(a, i));
                             a_end -= 2;
                         } else {
                             it_a += 2;
@@ -269,50 +393,120 @@ namespace jmaerte {
                     }
                 }
 
-                if (j != b_end) {
-                    if (GET_OCC(*a) + (b_end - j) / 2 > GET_SIZE(*a)) {
-                        ENLARGE(a, GET_OCC(*a) + (b_end - j) / 2);
-                    }
-                    it_a = AT(*a, GET_OCC(*a));
-                    SET_OCC(a, GET_OCC(*a) + (b_end - j) / 2);
-                    while (j != b_end) {
-                        num::ap_int x = num::iMUL(AT(*a, k), j);
-                        num::SET_POS(x, num::GET_POS(j));
-                        num::ASSIGN(it_a, x);
-                        delete[] x;
-                        j += 2;
-                        it_a += 2;
-                    }
+                if (occ + (b_end - j) / 2 > GET_SIZE(a)) {
+                    ENLARGE(a, occ + (b_end - j) / 2);
                 }
-                vec::DELETE_POS(*a, k);
+                it_a = AT(a, occ);
+                occ += (b_end - j) / 2;
+                while (j != b_end) {
+                    num::aux::iC_MUL(j, lambda, &it_a);
+                    num::SET_POS(it_a, num::GET_POS(j));
+                    j += 2;
+                    it_a += 2;
+                }
+
+                // update vector flags
+                SET_OCC(a, occ);
             }
 
-            void ADD(s_ap_int_vec* a, int start_a, num::ap_int lambda, s_ap_int_vec b, int start_b) {
-                num::ap_int a_end = AT(*a, GET_OCC(*a));
+            /**
+             * Addition for two multi number vectors with a single number scalar.
+             * @param a
+             * @param start_a
+             * @param lambda_num
+             * @param b
+             * @param start_b
+             */
+            void ADD_SINGLE_SCALAR(s_ap_int_vec& a, int start_a, num::ap_int lambda, s_ap_int_vec b, int start_b) {
+                num::ap_int a_end = AT(a, GET_OCC(a));
                 num::ap_int b_end = AT(b, GET_OCC(b));
 
-                num::ap_int it_a = AT(*a, start_a);
+                num::ap_int it_a = AT(a, start_a);
                 num::ap_int j = AT(b, start_b);
 
-                for (int i = start_a; i < GET_OCC(*a) && j != b_end;) {
-//                    std::cout << num::GET_POS(it_a) << " " << num::GET_POS(j) << std::endl;
-//                    std::cout << "i: " << i << ", occ: " << GET_OCC(*a) << std::endl;
-                    if (num::GET_POS(it_a) < num::GET_POS(j)) {
+                ULL pos_a, pos_b;
+                ULL occ = GET_OCC(a);
+                for (int i = start_a; i < occ && j != b_end;) {
+                    if ((pos_a = num::GET_POS(it_a)) < (pos_b = j->single >> 2)) {
                         i++;
                         it_a += 2;
-                    } else if (num::GET_POS(it_a) > num::GET_POS(j)) {
-                        if (GET_OCC(*a) + 1 > GET_SIZE(*a)) {
+                    } else if (pos_a > pos_b) {
+                        if (occ + 1 > GET_SIZE(a)) {
                             ENLARGE(a);
-                            it_a = AT(*a, i);
-                            a_end = AT(*a, GET_OCC(*a));
+                            it_a = AT(a, i);
+                            a_end = AT(a, occ);
+                        }
+                        // copy j and j + 1 into a.
+                        std::copy_backward(it_a, a_end, a_end + 2);
+                        num::aux::iC_MUL(lambda, j, &it_a);
+                        num::SET_POS(it_a, pos_b);
+                        occ++;
+                        a_end += 2;
+                        j += 2;
+                    } else {
+                        if (num::aux::iC_A_MUL(lambda, j, &it_a)) {
+                            if (num::GET_OCC(it_a) == 0) {
+                                num::DELETE_DATA(it_a);
+                                std::copy(AT(a, i + 1), AT(a, occ--), AT(a, i));
+                                a_end -= 2;
+                            } else {
+                                it_a += 2;
+                                i++;
+                            }
+                        } else {
+                            if (!(it_a + 1)->single) {
+                                std::copy(AT(a, i + 1), AT(a, occ--), AT(a, i));
+                                a_end -= 2;
+                            } else {
+                                it_a += 2;
+                                i++;
+                            }
+                        }
+                        j += 2;
+                    }
+                }
+
+                if (occ + (b_end - j) / 2 > GET_SIZE(a)) {
+                    ENLARGE(a, occ + (b_end - j) / 2);
+                }
+                it_a = AT(a, occ);
+                occ += (b_end - j) / 2;
+                while (j != b_end) {
+                    num::aux::iC_MUL(lambda, j, &it_a);
+                    num::SET_POS(it_a, num::GET_POS(j));
+                    j += 2;
+                    it_a += 2;
+                }
+
+                // update vector flags
+                SET_OCC(a, occ);
+            }
+
+            void ADD(s_ap_int_vec& a, int start_a, num::ap_int lambda, s_ap_int_vec b, int start_b) {
+                num::ap_int a_end = AT(a, GET_OCC(a));
+                num::ap_int b_end = AT(b, GET_OCC(b));
+
+                num::ap_int it_a = AT(a, start_a);
+                num::ap_int j = AT(b, start_b);
+                ULL pos_a, pos_b;
+                ULL occ = GET_OCC(a);
+                for (int i = start_a; i < occ && j != b_end;) {
+                    if ((pos_a = num::GET_POS(it_a)) < (pos_b = num::GET_POS(j))) {
+                        i++;
+                        it_a += 2;
+                    } else if (pos_a > pos_b) {
+                        if (occ + 1 > GET_SIZE(a)) {
+                            ENLARGE(a);
+                            it_a = AT(a, i);
+                            a_end = AT(a, occ);
                         }
                         // copy j and j + 1 into a.
                         std::copy_backward(it_a, a_end, a_end + 2);
                         num::ap_int x = num::iMUL(lambda, j);
-                        num::SET_POS(x, num::GET_POS(j));
+                        num::SET_POS(x, pos_b);
                         num::ASSIGN(it_a, x);
                         delete[] x;
-                        SET_OCC(a, GET_OCC(*a) + 1);
+                        occ++;
                         a_end += 2;
                         j += 2;
                     } else {
@@ -320,7 +514,8 @@ namespace jmaerte {
                         num::ADD(it_a, x);
                         num::DELETE(x);
                         if (num::GET_OCC(it_a) == 0) {
-                            DELETE_POS(*a, i);
+                            num::DELETE_DATA(it_a);
+                            std::copy(AT(a, i + 1), AT(a, occ--), AT(a, i));
                             a_end -= 2;
                         } else {
                             it_a += 2;
@@ -329,27 +524,21 @@ namespace jmaerte {
                         j += 2;
                     }
                 }
-
-                if (j != b_end) {
-//                    std::cout << "copying the rest of b" << std::endl;
-                    if (GET_OCC(*a) + (b_end - j) / 2 > GET_SIZE(*a)) {
-                        ENLARGE(a, GET_OCC(*a) + (b_end - j) / 2);
-//                        std::cout << "enlarged a" << std::endl;
-                    }
-                    it_a = AT(*a, GET_OCC(*a));
-                    SET_OCC(a, GET_OCC(*a) + (b_end - j) / 2);
-                    while (j != b_end) {
-//                        std::cout << (b_end - j) / 2 << std::endl;
-                        num::ap_int x = num::iMUL(lambda, j);
-//                        std::cout << "multiplied" << std::endl;
-                        num::ASSIGN(it_a, x);
-//                        std::cout << "assigned" << std::endl;
-                        delete[] x;
-//                        std::cout << "deleted x" << std::endl;
-                        j += 2;
-                        it_a += 2;
-                    }
+                if (occ + (b_end - j) / 2 > GET_SIZE(a)) {
+                    ENLARGE(a, occ + (b_end - j) / 2);
                 }
+                it_a = AT(a, occ);
+                occ += (b_end - j) / 2;
+                while (j != b_end) {
+                    num::ap_int x = num::iMUL(lambda, j);
+                    num::SET_POS(x, num::GET_POS(j));
+                    num::ASSIGN(it_a, x);
+                    delete[] x;
+                    j += 2;
+                    it_a += 2;
+                }
+                // update vector flags
+                SET_OCC(a, occ);
             }
 
             void MUL(s_ap_int_vec v, num::ap_int n) {
@@ -374,7 +563,7 @@ namespace jmaerte {
                     auto it = powers.find(n);
 
                     // Shift the denominator
-                    if (shift_blocks) std::memcpy(num::GET_ABS_DATA(AT(v, i)), remainder, shift_blocks);
+                    if (shift_blocks) std::memcpy(num::ABS(AT(v, i)), remainder, shift_blocks);
                     if (mask) *(remainder + shift_blocks) = num::aux::GET(AT(v, i), shift_blocks) & mask;
                     num::RSHIFT(AT(v, i), shift);
 
@@ -387,8 +576,8 @@ namespace jmaerte {
 
                     // redo shifting
                     num::LSHIFT(AT(v, i), shift);
-                    if (shift_blocks) std::memcpy(remainder, num::GET_ABS_DATA(AT(v, i)), shift_blocks);
-                    if (mask) *(num::GET_ABS_DATA(AT(v, i)) + shift_blocks) |= *(remainder + shift_blocks) & mask;
+                    if (shift_blocks) std::memcpy(remainder, num::ABS(AT(v, i)), shift_blocks);
+                    if (mask) *(num::ABS(AT(v, i)) + shift_blocks) |= *(remainder + shift_blocks) & mask;
                 }
                 delete[] remainder;
                 num::LSHIFT(modulus, shift);

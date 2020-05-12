@@ -11,8 +11,7 @@
 #include <cassert>
 #include <map>
 #include <data_types/stream.hpp>
-#include "data_types/lin/sparse.hpp"
-#include "utils.hpp"
+#include "../../../data_struc/src/utils.hpp"
 #include <arithmetic/typedef.hpp>
 #include <arithmetic/operator.hpp>
 

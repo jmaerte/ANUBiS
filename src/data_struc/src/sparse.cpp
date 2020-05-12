@@ -2,8 +2,8 @@
 // Created by jmaerte on 29.11.19.
 //
 
-#include "sparse.hpp"
-#include "calc/utils.hpp"
+#include "../include/data_types/sparse.hpp"
+#include "utils.hpp"
 
 
 template<typename T>

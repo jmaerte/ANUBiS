@@ -6,13 +6,18 @@
 #include "ANUBiS/complex.hpp"
 #include "calc/computation.hpp"
 #include "data_types/potence/potence.hpp"
-#include "multi_thread/thread_pool.hpp"
+#include <data_types/thread_pool.hpp>
 #include <boost/regex.hpp>
 #include <utility>
+#include <arithmetic/operator.hpp>
 #include <algebra/typedef.hpp>
+#include <algebra/matrix.hpp>
 #include <algebra/reduction.hpp>
+#include <arithmetic/factory/stack_allocator.hpp>
 
 using namespace jmaerte::arith;
+
+static const std::size_t BLOCK_SIZE = 1u << 27;
 
 static const char LogTable256[256] = {
     #define LT(n) n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n
@@ -21,6 +26,20 @@ static const char LogTable256[256] = {
                 LT(7), LT(7), LT(7), LT(7), LT(7), LT(7), LT(7), LT(7)
 };
 
+static unsigned int LOG2(unsigned int v) {
+    unsigned r;
+    register unsigned int t, tt;
+
+    if (tt = v >> 16)
+    {
+        r = (t = tt >> 8) ? 24 + LogTable256[t] : 16 + LogTable256[tt];
+    }
+    else
+    {
+        r = (t = v >> 8) ? 8 + LogTable256[t] : LogTable256[v];
+    }
+}
+
 
 using namespace jmaerte::algebra;
 
@@ -28,122 +47,7 @@ namespace jmaerte {
     namespace anubis {
 
         static const int UINT_SIZE = 8 * sizeof(unsigned int);
-
-
-
-        template<typename complex_constructor>
-        auto complex_from_file(
-                complex_constructor constructor,
-                const std::string & path,
-                int sceleton,
-                const std::string & sep,
-                const std::string & set_openers,
-                const std::string & set_closers
-        ) -> typename std::result_of<complex_constructor(std::string, int)>::type {
-            using complex_type = typename std::result_of<complex_constructor(std::string, int)>::type;
-            static_assert(std::is_base_of<jmaerte::anubis::complex, typename std::remove_pointer<complex_type>::type>::value, "complex_type must be derived from complex.");
-            std::cout << "Opening file..." << std::endl;
-            std::ifstream file;
-            file.open(path);
-            std::string content;
-            if (file.is_open()) {
-                content = {(std::istreambuf_iterator<char>(file)), (std::istreambuf_iterator<char>())};
-            } else {
-                throw std::invalid_argument("[IO] Error: failed to open file!");
-            }
-            file.close();
-            std::cout << "Read file..." << std::endl;
-            size_t pos = content.find(" ");
-
-            while(pos != std::string::npos) {
-                content.replace(pos, 1, "");
-                pos = content.find(" ", pos);
-            }
-
-            std::string name;
-
-            pos = content.find(":=");
-            if (pos != std::string::npos) {
-                name = content.substr(0, pos);
-                content = content.substr(pos + 2, content.size());
-            } else {
-                pos = content.find('=');
-                if (pos != std::string::npos) {
-                    name = content.substr(0, pos);
-                    content = content.substr(pos + 1, content.size());
-                } else {
-                    throw std::invalid_argument("Simplicial Complex file must have a name followed by '=' or ':='.");
-                }
-            }
-
-            std::cout << "Found name: " << name << std::endl;
-
-            content = content.substr(1, content.size() - 2);
-
-            boost::regex simplex("[" + set_openers + "](([\\[{][\\w" + sep + "]*[\\]}])|([\\w" + sep + "]*))*[" + set_closers + "]");
-            boost::sregex_token_iterator iter(content.begin(), content.end(), simplex, 0);
-            boost::sregex_token_iterator end;
-
-            std::map<std::string, unsigned int> labels;
-            unsigned int i_labels = 0;
-
-            complex_type complex = constructor(name, sceleton);
-
-            {
-                thread_pool workers(-1);
-
-                while (iter != end) {
-                    std::string s_facet = *iter;
-                    s_facet = s_facet.substr(1, s_facet.size() - 2);
-
-                    boost::regex element("[" + set_openers + "][\\w,]*[" + set_closers + "]|[\\w]+");
-                    boost::sregex_token_iterator element_iter(s_facet.begin(), s_facet.end(), element, 0);
-                    boost::sregex_token_iterator element_end;
-
-                    auto facet = new std::vector<unsigned int>();
-
-                    while (element_iter != element_end) {
-                        std::string curr = *element_iter;
-                        if (labels.find(curr) == labels.end()) labels[curr] = i_labels++;
-                        facet->push_back(labels[curr]);
-                        element_iter++;
-                    }
-
-//                    std::cout << "Pushing " << s_facet << std::endl;
-
-//                    tree->s_insert(facet, sceleton);
-                    std::function<void()> fn = [complex, facet, sceleton]() {
-                        complex->facet_insert(facet);
-                    };
-
-                    workers.add_work(fn);
-                    iter++;
-                }
-                std::cout << "pushed all" << std::endl;
-            }
-            std::cout << "processed all" << std::endl;
-
-            return complex;
-        }
-
-        template<typename complex_constructor>
-        auto complex_from_facets(
-                complex_constructor constructor,
-                std::vector<std::vector<unsigned int> *> &facets,
-                std::string name,
-                int sceleton
-        ) -> typename std::result_of<complex_constructor(std::string, int)>::type {
-
-            using complex_type = typename std::result_of<complex_constructor(std::string, int)>::type;
-            static_assert(std::is_base_of<jmaerte::anubis::complex, typename std::remove_pointer<complex_type>::type>::value, "complex_type must be derived from complex.");
-
-            complex_type complex = constructor(name, sceleton);
-            for (const auto & facet : facets) {
-                complex->facet_insert(facet);
-            }
-            return complex;
-        }
-
+        static const bool ALWAYS_BOUNDARY = true;
 
         /***************************************************************************************************************
          * Helper-Methods for generate
@@ -291,9 +195,6 @@ namespace jmaerte {
                 potence<unsigned int> pot {facet, (int) dim + 1};
                 while (!pot.done() && pot.order() == dim + 1) {
                     auto * simplex = new unsigned int[SIMPLEX_SIZE] { };
-//                    for (int i = 0; i < SIMPLEX_SIZE; i++) {
-//                        simplex[i] = 0u;
-//                    }
                     for (auto it = pot.begin(); it != pot.end(); ++it) {
                         simplex[*it / UINT_SIZE] |= 1u << (*it % UINT_SIZE);
                     }
@@ -314,6 +215,7 @@ namespace jmaerte {
 //            }
             f[dim] = filled;
             past[dim] = list;
+            std::cout << "Generated faces of dimension " << (dim) << "; f_" << (dim) << " = " << f[dim] << "." << std::endl;
             return past[dim];
         }
 
@@ -326,49 +228,46 @@ namespace jmaerte {
             return past.find(dim) != past.end();
         }
 
-        s_list* s_list::from_file(
-                    const std::string &path,
-                    int sceleton,
-                    const std::string &sep,
-                    const std::string &set_openers,
-                    const std::string &set_closers
-                ) {
-            return complex_from_file([](std::string name, int sceleton) {
-                return new s_list(std::move(name), sceleton);
-            }, path, sceleton, sep, set_openers, set_closers);
-        }
-
-        s_list* s_list::from_facets(std::vector<std::vector<unsigned int> *> &facets, std::string name, int sceleton) {
-            return complex_from_facets([](std::string name, int sceleton) {
-                return new s_list(std::move(name), sceleton);
-            }, facets, std::move(name), sceleton);
-        }
-
-
         s_list::~s_list() {
             clear_map();
         }
 
-        s_int_matrix s_list::boundary(int dim) {
+        stream<int> s_list::boundary_first(unsigned int dim) {
+            assert(0 < dim && dim < f.size());
+            unsigned int * top = generate(dim);
+            unsigned int * low = generate(dim - 1);
+            int SIMPLEX_SIZE = get_simplex_size();
+            return transform(ints_from(0).take(f[dim]), [this, top, low, dim, SIMPLEX_SIZE](int i) {
+                unsigned int * simplex = top + i * SIMPLEX_SIZE;
+                int curr_index = SIMPLEX_SIZE - 1;
+                unsigned int curr = simplex[curr_index];
+                while (curr == 0) curr = *(simplex + --curr_index);
+                unsigned int leading = 1 << log_2(curr);
+                *(simplex + curr_index) ^= leading;
+                int k = binary_search(low, simplex, 0, this->f[dim - 1], SIMPLEX_SIZE);
+                *(simplex + curr_index) |= leading;
+                return k;
+            });
+        }
+
+        s_int_matrix s_list::boundary(unsigned int dim) {
             assert(0 <= dim && dim < f.size());
-            if(f[dim] == 0) {
-                generate(dim);
-                std::cout << "Generated faces of dimension " << dim << "; f_" << dim << " = " << f[dim] << "." << std::endl;
-            }
+            unsigned int * top = generate(dim);
+            unsigned int * low;
             if (dim > 0) {
-                if(f[dim - 1] == 0) {
-                    generate(dim - 1);
-                    std::cout << "Generated faces of dimension " << (dim - 1) << "; f_" << (dim - 1) << " = " << f[dim - 1] << "." << std::endl;
-                }
+                low = generate(dim - 1);
             }
             int SIMPLEX_SIZE = get_simplex_size();
-            return dim == 0 ? transform(ints_from(0).take(f[dim]), [this](int i) {
-                return vec::NEW({
+
+            unsigned int factory_id = arith::vec::factory::REGISTER<arith::vec::stack_allocator<BLOCK_SIZE>>();
+
+            return dim == 0 ? s_int_matrix(factory_id, f[dim], [this](int i, unsigned int factory_id) {
+                return vec::NEW(factory_id, {
                     {0ULL, {false, 1ULL}}
                 }); // reduced boundary
-            }) : transform(ints_from(0).take(f[dim]), [this, dim, SIMPLEX_SIZE](int i) {
+            }) : s_int_matrix(factory_id, f[dim], [this, top, dim, SIMPLEX_SIZE](int i, unsigned int factory_id) {
                 std::vector<std::pair<ULL, std::pair<bool, ULL>>> vec {static_cast<std::size_t>(dim + 1)};
-                unsigned int * simplex = this->past[dim] + i * SIMPLEX_SIZE;
+                unsigned int * simplex = top + i * SIMPLEX_SIZE;
                 int curr_index = 0;
                 unsigned int curr = simplex[0];
                 unsigned int leading;
@@ -385,7 +284,152 @@ namespace jmaerte {
                     );
                     *(simplex + curr_index) |= leading;
                 }
-                return vec::NEW(vec);
+                return vec::NEW(factory_id, vec);
+            });
+        }
+
+        s_int_matrix s_list::coboundary(unsigned int dim) {
+            assert(0 <= dim && dim < f.size());
+            unsigned int * low = generate(dim);
+            int SIMPLEX_SIZE = get_simplex_size();
+
+            unsigned int * top;
+            if (dim + 1 < f.size()) {
+                top = generate(dim + 1);
+            }
+
+            unsigned int factory_id = arith::vec::factory::REGISTER<arith::vec::stack_allocator<BLOCK_SIZE>>();
+
+            return dim + 1 == f.size() ? s_int_matrix(factory_id, f[dim], [this](int i, unsigned int factory_id) {
+                return vec::NEW(factory_id, {
+                    {0ULL, {false, 0ULL}}
+                });
+            }) : s_int_matrix(factory_id, f[dim], [this, low, top, dim, SIMPLEX_SIZE](int i, unsigned int factory_id) {
+//                std::vector<int> indices {};
+//                indices.reserve(dim + 3);
+                std::vector<unsigned int> lead {};
+                lead.reserve(dim + 3);
+                std::vector<unsigned int> curr_indices {};
+                curr_indices.reserve(dim + 3);
+                unsigned int * simplex = low + i * SIMPLEX_SIZE;
+
+                int curr_index = 0;
+                unsigned int leading;
+                unsigned int curr = simplex[curr_index];
+                unsigned int * query = new unsigned int[SIMPLEX_SIZE] { };
+
+//                std::cout << std::endl;
+//                std::cout << "SIMPLEX : ";
+//                for (int k = SIMPLEX_SIZE - 1; k >= 0; k--) {
+//                    std::cout << std::bitset<32>(*(simplex + k)) << " ";
+//                }
+//                std::cout << std::endl;
+
+                unsigned int last = 0;
+//                indices[0] = 0;
+                lead[0] = 0;
+                curr_indices[0] = -1;
+                for (int i = 0; i <= dim; i++) {
+                    while (curr == 0) curr = simplex[++curr_index];
+//                    unsigned int c = curr;
+//                    leading = 1u;
+//                    while (c != 1u) {
+//                        c >>= 1;
+//                        leading <<= 1;
+//                    }
+//                    curr ^= leading;
+                    leading = ((curr - 1) | curr) ^ (curr - 1);
+                    curr ^= leading;
+                    query[curr_index] |= leading;
+
+//                    std::cout << "QUERY: ";
+//                    for (int k = SIMPLEX_SIZE - 1; k >= 0; k--) {
+//                        std::cout << std::bitset<32>(*(query + k)) << " ";
+//                    }
+//                    std::cout << std::endl;
+//                    std::cout << std::bitset<32>(leading) << std::endl;
+//                    indices[i + 1] = (last = binary_search(top, query, last, f[dim + 1], SIMPLEX_SIZE));
+//                    std::cout << "CLOSE: ";
+//                    for (int k = SIMPLEX_SIZE - 1; k >= 0; k--) {
+//                        std::cout << std::bitset<32>(*(top + last * SIMPLEX_SIZE + k)) << " ";
+//                    }
+//                    std::cout << "INDEX: " << indices[dim - i + 1] << std::endl;
+                    lead[i + 1] = leading;
+                    curr_indices[i + 1] = curr_index;
+                }
+                lead[dim + 2] = 1u;
+                curr_indices[dim + 2] = SIMPLEX_SIZE;
+//                indices[dim + 2] = f[dim + 1];
+//                curr_index = 0;
+//                leading = 1u;
+                last = 0;
+
+                std::vector<std::pair<ULL, std::pair<bool, ULL>>> vec;
+//                for (int i = 0; i < SIMPLEX_SIZE; i++) query[i] = simplex[i];
+
+                for (int i = 0; i <= dim + 1; i++) {
+//                    last = indices[i + 1];
+//                    std::cout << "INDEX: " << indices[i] << std::endl;
+                    leading = lead[i] << 1;
+                    curr_index = curr_indices[i];
+                    if (leading == 0) {
+                        leading = 1u;
+                        curr_index++;
+                    }
+                    while(!(leading == lead[i + 1] && curr_index == curr_indices[i + 1])) {
+//                        std::cout << leading << " " << curr_index << std::endl;
+//                        std::cout << lead[i + 1] << " " << curr_indices[i + 1] << std::endl;
+//                        std::cout << indices[i] << " " << last << " " << indices[i + 1] << " " << std::bitset<32>(leading) << " " << std::bitset<32>(lead[i]) << " " << curr_index << " " << curr_indices[i] << std::endl;
+//                        if (curr_index > 2) std::_Exit(0);
+//                        if (i > 0 && leading == lead[i - 1] && curr_index == curr_indices[i - 1]) {
+//                            leading <<= 1;
+//                        } else {
+                        query[curr_index] |= leading;
+                        last = binary_search(top, query, last, f[dim + 1], SIMPLEX_SIZE);
+//                            if (last == indices[i + 1]) {
+//                                query[curr_index] ^= leading;
+//                                leading = lead[i];
+//                                curr_index = curr_indices[i];
+//                                std::cout << "BREAK" << std::endl;
+//                                break;
+//                            }
+
+//                            std::cout << "QUERY: ";
+//                            for (int k = SIMPLEX_SIZE - 1; k >= 0; k--) {
+//                                std::cout << std::bitset<32>(*(query + k)) << " ";
+//                            }
+//                            std::cout << std::endl;
+//                            std::cout << "CLOSE: ";
+//                            for (int k = SIMPLEX_SIZE - 1; k >= 0; k--) {
+//                                std::cout << std::bitset<32>(*(top + last * SIMPLEX_SIZE + k)) << " ";
+//                            }
+//                            std::cout << std::endl;
+
+                        bool equals = true;
+                        for (int j = SIMPLEX_SIZE - 1; j >= 0; j--) {
+                            if (query[j] != *(top + SIMPLEX_SIZE * last + j)) {
+                                equals = false;
+                                break;
+                            }
+                        }
+                        if (equals) {
+//                            std::cout << "IS COBOUNDARY" << std::endl;
+                            vec.push_back(std::make_pair(
+                                    (ULL) last,
+                                    std::make_pair(i % 2, 1ULL)
+                            ));
+                        }
+                        query[curr_index] ^= leading;
+                        leading <<= 1;
+//                        }
+                        if (leading == 0) {
+                            leading = 1u;
+                            curr_index++;
+                        }
+                    }
+                }
+                delete[] query;
+                return vec::NEW(factory_id, vec);
             });
         }
 
@@ -393,10 +437,18 @@ namespace jmaerte {
             return vertices / UINT_SIZE + (vertices % UINT_SIZE == 0 ? 0 : 1);
         }
 
-        std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> s_list::homology(int dim) {
+        std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> s_list::homology(unsigned int dim) {
             auto it_dim = smith_forms.find(dim);
             if (it_dim == smith_forms.end()) {
-                smith_forms.emplace(dim, reduction::smith(boundary(dim)));
+                if (dim > 0 && f[dim - 1] == 0) generate(dim - 1);
+                if (f[dim] == 0) generate(dim);
+                if (dim == 0 || f[dim] < f[dim - 1] || ALWAYS_BOUNDARY) {
+                    std::cout << "Calculating smith normal form of boundary." << std::endl;
+                    smith_forms.emplace(dim, reduction::smith(boundary(dim)));
+                } else {
+                    std::cout << "Calculating smith normal form of coboundary." << std::endl;
+                    smith_forms.emplace(dim, reduction::smith(coboundary(dim - 1)));
+                }
                 it_dim = smith_forms.find(dim);
             }
             auto d_map = it_dim->second;
@@ -405,7 +457,7 @@ namespace jmaerte {
             auto it = d_map.begin();
             while (it != d_map.end()) {
                 // DEBUGGING
-                std::cout << num::STRINGIFY(it->first) << " -> " << it->second << "." << std::endl;
+//                std::cout << num::STRINGIFY(it->first) << " -> " << it->second << "." << std::endl;
                 // END DEBUGGING
                 kernel_rank -= it->second;
                 it++;
@@ -414,13 +466,40 @@ namespace jmaerte {
             if (dim + 1 < f.size()) {
                 it_dim = smith_forms.find(dim + 1);
                 if (it_dim == smith_forms.end()) {
-                    smith_forms.emplace(dim + 1, reduction::smith(boundary(dim + 1)));
+                    if (f[dim + 1] == 0) generate(dim + 1);
+
+                    // check if the rank is already its own bound
+                    stream<int> first = boundary_first(dim + 1);
+                    int curr_first = -1;
+                    int rank_lower_bound = 0;
+                    while (!first.is_empty()) {
+                        if (first.get() != curr_first) {
+                            curr_first = first.get();
+                            rank_lower_bound++;
+                        }
+                        first = first.pop_front();
+                    }
+
+                    std::cout << rank_lower_bound << " " << kernel_rank << std::endl;
+                    if (rank_lower_bound >= kernel_rank) {
+                        std::cout << "Rank of partial_" << (dim + 1) << " determined by trivial rank criterium, rank is " << kernel_rank << "." << std::endl;
+                        std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> rk = {{jmaerte::arith::num::NEW(1, false, 1ULL), kernel_rank}};
+                        smith_forms.emplace(dim + 1, rk);
+                    } else {
+                        if (f[dim + 1] < f[dim] || ALWAYS_BOUNDARY) {
+                            std::cout << "Calculating smith normal form of boundary." << std::endl;
+                            smith_forms.emplace(dim + 1, reduction::smith(boundary(dim + 1)));
+                        } else {
+                            std::cout << "Calculating smith normal form of coboundary of dimension " << (dim) << " -> " << (dim + 1) << "." << std::endl;
+                            smith_forms.emplace(dim + 1, reduction::smith(coboundary(dim)));
+                        }
+                    }
                     it_dim = smith_forms.find(dim + 1);
                 }
                 auto d_m_map = it_dim->second;
                 for (auto kv : d_m_map) {
-                    std::cout << num::STRINGIFY(kv.first) << " -> " << kv.second << "." << std::endl;
-                    if (!(num::GET_OCC(kv.first) == 1 && *(num::GET_ABS_DATA(kv.first)) == 1ULL)) result.emplace(kv.first, kv.second);
+//                    std::cout << num::STRINGIFY(kv.first) << " -> " << kv.second << "." << std::endl;
+                    if (!(num::IS_SINGLE(kv.first) == 1 && *(num::ABS(kv.first)) == 1ULL)) result.emplace(kv.first, kv.second);
                     kernel_rank -= kv.second;
                 }
             }
@@ -506,29 +585,15 @@ namespace jmaerte {
             delete head;
         }
 
-        s_tree * s_tree::from_file(
-                    const std::string &path,
-                    int sceleton,
-                    const std::string &sep,
-                    const std::string &set_openers,
-                    const std::string &set_closers
-                ) {
-            return complex_from_file([](std::string name, int sceleton) {
-                return new s_tree(name, sceleton);
-            }, path, sceleton, sep, set_openers, set_closers);
+        s_int_matrix s_tree::boundary(unsigned int dim) {
+            return jmaerte::algebra::NEW({});
         }
 
-        s_tree *s_tree::from_facets(std::vector<std::vector<unsigned int> *> &facets, std::string name, int sceleton) {
-            return complex_from_facets([](std::string name, int sceleton) {
-                return new s_tree(name, sceleton);
-            }, facets, name, sceleton);
+        s_int_matrix s_tree::coboundary(unsigned int dim) {
+            return jmaerte::algebra::NEW({});
         }
 
-        s_int_matrix s_tree::boundary(int dim) {
-            return {};
-        }
-
-        std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> s_tree::homology(int i) {
+        std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> s_tree::homology(unsigned int i) {
             return std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR>();
         }
 

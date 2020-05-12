@@ -6,6 +6,8 @@ else()
     SET(Boost_ARCHITECTURE -x86)
 endif()
 
+set(CMAKE_CXX_STANDARD 17)
+
 if(WIN32 AND "x${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}" STREQUAL "x")
     message(WARNING "WIN32 compiler does not specify CMAKE_CXX_COMPILER_ARCHITECTURE_ID -- filling in manually")
     if(CMAKE_SIZEOF_VOID_P EQUAL 8)

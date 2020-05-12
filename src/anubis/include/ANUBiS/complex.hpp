@@ -12,7 +12,6 @@
 #include <iterator>
 #include <unordered_map>
 #include <mutex>
-#include "data_types/lin/sparse.hpp"
 #include <algebra/typedef.hpp>
 #include <data_types/stream.hpp>
 #include <ANUBIS_EXPORT.h>
@@ -36,7 +35,8 @@ namespace jmaerte {
         private:
 
             virtual s_float_matrix   laplacian(int i) = 0;
-            virtual s_int_matrix     boundary(int dim) = 0;
+            virtual s_int_matrix     boundary(unsigned int dim) = 0;
+            virtual s_int_matrix     coboundary(unsigned int dim) = 0;
 
         protected:
 
@@ -53,7 +53,7 @@ namespace jmaerte {
 
             virtual void facet_insert(const std::vector<unsigned int> *) = 0;
             std::vector<double> laplacian_spectrum(int i);
-            virtual std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> homology(int dim) = 0;
+            virtual std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> homology(unsigned int dim) = 0;
 
             std::vector<int> f_vector();
         };
@@ -70,7 +70,9 @@ namespace jmaerte {
             int vertices;
 
             s_float_matrix   laplacian(int i) override;
-            s_int_matrix     boundary(int dim) override;
+            s_int_matrix     boundary(unsigned int dim) override;
+            s_int_matrix     coboundary(unsigned int dim) override;
+            stream<int>      boundary_first(unsigned int dim);
 
             std::pair<int, int> bit_position(int pos);
             int get_simplex_size();
@@ -89,15 +91,7 @@ namespace jmaerte {
             unsigned int * generate(unsigned int dim);
             bool calculated(unsigned int dim);
 
-            std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> homology(int dim) override;
-
-            static s_list* from_file(
-                    const std::string &,
-                    int sceleton = -2,
-                    const std::string & sep = ",",
-                    const std::string & set_openers = "\\[{",
-                    const std::string & set_closers = "\\]}");
-            static s_list* from_facets(std::vector<std::vector<unsigned int>*> &facets, std::string name, int sceleton = -1);
+            std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> homology(unsigned int dim) override;
         };
 
         class ANUBIS_EXPORT s_tree : public complex {
@@ -127,8 +121,9 @@ namespace jmaerte {
                 return n;
             }
 
-            s_int_matrix     boundary(int dim) override;
+            s_int_matrix     boundary(unsigned int dim) override;
             s_float_matrix   laplacian(int i) override;
+            s_int_matrix     coboundary(unsigned int dim) override;
 
             s_tree(std::string name, int sceleton = -1);
 
@@ -146,15 +141,7 @@ namespace jmaerte {
 
             void facet_insert(const std::vector<unsigned int> *) override;
             void print();
-            std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> homology(int i) override;
-
-            static s_tree * from_file(
-                    const std::string &,
-                    int sceleton = -2,
-                    const std::string & sep = ",",
-                    const std::string & set_openers = "\\[{",
-                    const std::string & set_closers = "\\]}");
-            static s_tree * from_facets(std::vector<std::vector<unsigned int>*> &facets, std::string name, int sceleton = -1);
+            std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> homology(unsigned int i) override;
         };
     }
 }

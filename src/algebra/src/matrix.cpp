@@ -3,12 +3,15 @@
 //
 
 #include "algebra/matrix.hpp"
+#include <arithmetic/factory/stack_allocator.hpp>
+#include <arithmetic/operator.hpp>
 
 namespace jmaerte {
     namespace algebra {
 
         s_int_matrix NEW(std::vector<arith::vec::s_ap_int_vec> arr) {
-            return typings::transform(typings::ints_from(0).take(arr.size()), [&arr](int i) {
+            unsigned int factory_id = arith::vec::factory::REGISTER<arith::vec::stack_allocator<2048>>();
+            return s_int_matrix(factory_id, arr.size(), [&arr](int i, unsigned int factory_id) {
                 return arr[i];
             });
         }

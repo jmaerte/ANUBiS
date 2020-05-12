@@ -1,11 +1,12 @@
 set(LIBRARY_TARGET_NAME DATA_STRUCTURES)
 
 set(${LIBRARY_TARGET_NAME}_SRC
-        src/rw_mutex.cpp)
+        src/sparse.cpp)
 
 set(${LIBRARY_TARGET_NAME}_PUBLIC_HDR
         include/data_types/stream.hpp
-        include/data_types/rw_mutex.hpp)
+        include/data_types/sparse.hpp
+        include/data_types/memory/pool_allocator.hpp)
 
 set(${LIBRARY_TARGET_NAME}_PRIVATE_HDR)
 

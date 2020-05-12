@@ -2,7 +2,7 @@ set(LIBRARY_TARGET_NAME ${PROJECT_NAME})
 
 set(${LIBRARY_TARGET_NAME}_SRC
 		src/complex.cpp
-		src/data_types/lin/sparse.cpp
+		../data_struc/src/sparse.cpp
 		src/data_types/potence/potence.cpp)
 
 set(${LIBRARY_TARGET_NAME}_PUBLIC_HDR
@@ -10,13 +10,14 @@ set(${LIBRARY_TARGET_NAME}_PUBLIC_HDR
 
 set(${LIBRARY_TARGET_NAME}_PRIVATE_HDR
 		src/calc/computation.hpp
-		src/data_types/lin/sparse.hpp
+		../data_struc/include/data_types/sparse.hpp
 		src/data_types/potence/potence.hpp
-		src/multi_thread/thread_pool.hpp
+        ../data_struc/include/data_types/thread_pool.hpp
 		src/calc/computation.hpp
-		src/calc/utils.hpp)
+		../data_struc/src/utils.hpp)
 
 add_library(${LIBRARY_TARGET_NAME} SHARED ${${LIBRARY_TARGET_NAME}_SRC} ${${LIBRARY_TARGET_NAME}_PUBLIC_HDR} ${${LIBRARY_TARGET_NAME}_PRIVATE_HDR})
+target_compile_options(${LIBRARY_TARGET_NAME} PRIVATE "SHELL:--param ggc-min-heapsize=1000000000")
 
 if (ARCHITECTURE STREQUAL "32")
 	set_target_properties(${LIBRARY_TARGET_NAME} PROPERTIES COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")

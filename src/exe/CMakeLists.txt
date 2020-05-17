@@ -18,7 +18,7 @@ endif()
 target_include_directories(${EXE_TARGET_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
 													 "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>")
 
-target_link_libraries (${EXE_TARGET_NAME} ANUBiS::ARITHMETIC ANUBiS::ANUBiS)
+target_link_libraries (${EXE_TARGET_NAME} ANUBiS::ARITHMETIC ANUBiS::ANUBiS ANUBiS::OUTPUT)
 
 IF(WIN32)
 	target_link_libraries(${EXE_TARGET_NAME} winpthread)

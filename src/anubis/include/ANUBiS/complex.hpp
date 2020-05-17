@@ -56,18 +56,27 @@ namespace jmaerte {
             virtual std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> homology(unsigned int dim) = 0;
 
             std::vector<int> f_vector();
+
+            std::string get_name() {
+                return name;
+            }
+
+            virtual unsigned int get_dim() = 0;
         };
 
+        template<bool binary_storage>
         class ANUBIS_EXPORT s_list : public complex {
         private:
+
+            void instantiation_helper();
 
             static const unsigned int highest_mask = (unsigned int) 1 << (8 * sizeof(unsigned int) - 1);
 
             std::mutex facet_mutex;
-            std::vector<std::vector<unsigned int>> facets;
-            std::map<unsigned int, unsigned int *> past;
-            std::map<unsigned int, std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR>> smith_forms;
-            int vertices;
+            std::vector<std::vector<unsigned int>> facets = {};
+            std::map<unsigned int, unsigned int *> past = {};
+            std::map<unsigned int, std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR>> smith_forms = {};
+            int vertices = 0;
 
             s_float_matrix   laplacian(int i) override;
             s_int_matrix     boundary(unsigned int dim) override;
@@ -76,7 +85,7 @@ namespace jmaerte {
 
             std::pair<int, int> bit_position(int pos);
             int get_simplex_size();
-
+        protected:
             s_list(std::string name, int sceleton): complex(name, sceleton), smith_forms() {}
 
         public:
@@ -92,6 +101,18 @@ namespace jmaerte {
             bool calculated(unsigned int dim);
 
             std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> homology(unsigned int dim) override;
+
+            static s_list* from_file(
+                    const std::string &,
+                    int sceleton = -2,
+                    const std::string & sep = ",",
+                    const std::string & set_openers = "\\[{",
+                    const std::string & set_closers = "\\]}");
+            static s_list* from_facets(const std::vector<std::vector<unsigned int>*> &facets, std::string name, int sceleton = -1);
+
+            unsigned int get_dim() {
+                return f.size() - 1;
+            }
         };
 
         class ANUBIS_EXPORT s_tree : public complex {
@@ -142,6 +163,18 @@ namespace jmaerte {
             void facet_insert(const std::vector<unsigned int> *) override;
             void print();
             std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> homology(unsigned int i) override;
+
+            static s_tree * from_file(
+                    const std::string &,
+                    int sceleton = -2,
+                    const std::string & sep = ",",
+                    const std::string & set_openers = "\\[{",
+                    const std::string & set_closers = "\\]}");
+            static s_tree * from_facets(const std::vector<std::vector<unsigned int>*> &facets, std::string name, int sceleton = -1);
+
+            unsigned int get_dim() {
+                return 0;
+            }
         };
     }
 }

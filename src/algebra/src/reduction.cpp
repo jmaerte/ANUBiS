@@ -4,6 +4,7 @@
 
 #include "algebra/reduction.hpp"
 #include <arithmetic/operator.hpp>
+#include <arithmetic/factory/heap_allocator.hpp>
 #include "util/search.hpp"
 #include <cstdlib>
 #include <malloc.h>
@@ -21,7 +22,7 @@ namespace jmaerte {
 
                 double time_elapsed;
 
-//                std::cout << "smithing" << std::endl;
+                unsigned int remainder_factory_id = arith::vec::factory::REGISTER<jmaerte::arith::vec::std_factory>();
 
                 std::vector<vec::s_ap_int_vec> remainder;
                 std::vector<int> first_remainder;
@@ -33,7 +34,7 @@ namespace jmaerte {
                     while (!matrix.is_empty()) {
                         vec::s_ap_int_vec vec = matrix.get();
 
-//                        if (++count % 1000 == 0) std::cout << count << std::endl;
+                        if (++count % 1000 == 0) std::cout << count << std::endl;
 //                        matrix = matrix.pop_front();
 
                         // REDUCED ROW ECHELON FORM
@@ -54,13 +55,15 @@ namespace jmaerte {
 //                            }
 //                        }
 //                        for (int j = 0; j < indices.size(); j++) {
-//                            vec::REDUCE(&vec, trivial[addition_indices[j]], vec::FIND_POS(vec, indices[j]));
+//                            vec::REDUCE(vec, trivial[addition_indices[j]], vec::FIND_POS(vec, indices[j]));
 //                        }
 
+                        // NON REDUCED ROW ECHELON
                         int pos = num::GET_POS(vec::AT(vec, 0));
                         int k = util::binary_search(first, pos, 0, first.size(), util::compare_ints);
 
                         while (k < first.size() && first[k] == pos) {
+
                             vec::REDUCE(vec, trivial[k], 0);
 
                             if (vec::GET_OCC(vec) == 0) {
@@ -74,7 +77,6 @@ namespace jmaerte {
                             vec::DELETE(vec);
                         } else if (num::IS_SINGLE(vec::AT(vec, 0)) && (vec::AT(vec, 0) + 1)->single == 1ULL) {
                             // assert that the leading entry is -1.
-//                            std::cout << "adding to list" << std::endl;
                             if (!num::GET_SIGN(vec::AT(vec, 0))) vec::SWITCH_SIGNS(vec);
 //                            pos = num::GET_POS(vec::AT(vec, 0));
 
@@ -83,10 +85,10 @@ namespace jmaerte {
 //
 //                                int j = vec::FIND_POS(v, pos);
 //                                if (j < vec::GET_OCC(v) && num::GET_POS(vec::AT(v, j)) == pos) {
-//                                    vec::REDUCE(&v, vec, j);
+//                                    vec::REDUCE(v, vec, j);
 //                                }
 //                            }
-
+//
 //                            k = util::binary_search(first, pos, 0, first.size(), util::compare_ints);
 
                             trivial.insert(trivial.begin() + k, vec);
@@ -96,37 +98,30 @@ namespace jmaerte {
                             for (vec::s_ap_int_vec& v : remainder) {
                                 int j = vec::FIND_POS(v, pos);
                                 if (j < vec::GET_OCC(v) && num::GET_POS(vec::AT(v, j)) == pos) {
+
                                     vec::REDUCE(v, vec, j);
                                 }
                             }
                         } else {
-                            pos = num::GET_POS(vec::AT(vec, 0));
+//                            pos = num::GET_POS(vec::AT(vec, 0));
                             k = util::binary_search(first_remainder, pos, 0, first_remainder.size(), util::compare_ints);
-                            remainder.insert(remainder.begin() + k, vec);
+                            remainder.insert(remainder.begin() + k, vec::COPY(remainder_factory_id, vec));
+                            vec::DELETE(vec);
                             first_remainder.insert(first_remainder.begin() + k, pos);
                         }
                     }
                     result.emplace(num::NEW(1, false, 1ULL), first.size());
 
-                    for (int j = 0; j < trivial.size(); j++) {
-                        vec::DELETE(trivial[j]);
-                    }
-                    trivial.clear();
+//                    for (int j = 0; j < trivial.size(); j++) {
+//                        vec::DELETE(trivial[j]);
+//                    }
+//                    trivial.clear();
                 }
 
-                // TODO: COPY THE REMAINDER MATRIX
                 arith::vec::factory::RELEASE(matrix.get_factory_id());
 
                 int n = remainder.size();// amount of non-trivial vectors in remainder.
                 std::cout << "Remainder matrix has " << n << " rows." << std::endl;
-
-                for (int i = 0; i < n; i++) {
-                    std::cout << "VECTOR: ";
-                    vec::s_ap_int_vec vec = remainder[i];
-                    for (int i = 0; i < vec::GET_OCC(vec); i++) {
-                        std::cout << num::GET_POS(vec::AT(vec, i)) << " -> " << (vec::AT(vec, i) + 1)->single << std::endl;
-                    }
-                }
 
                 for (int i = 0; i < n; i++) {
                     if (i % 100 == 0) std::cout << "\rCalculating Smith Normalform " << i << " / " << remainder.size();

@@ -8,6 +8,7 @@
 #include "Ivector_allocator.hpp"
 #include "../operator.hpp"
 #include <cstdlib>
+#include <sstream>
 
 namespace jmaerte {
     namespace arith {
@@ -23,27 +24,39 @@ namespace jmaerte {
             class stack_allocator : public vector_allocator {
             public:
                 ~stack_allocator() {
-                    free();
+                    this->free();
                 }
 
 
                 // ALLOCATION
                 virtual s_ap_int_vec allocate_vec(std::size_t size) {
                     if (1 + 2 * size > block_size) {
-                        std::cout << "[MEM] ERROR - Vector got larger than page size!" << std::endl;
-                        throw std::bad_alloc{};
+                        jmaerte::output::LOGGER.err(channel_id,
+                            "Vector got larger than page size!",
+                            jmaerte::output::LOGGER.BAD_ALLOC);
+                        throw;
                     }
-                    if (alloc == nullptr || (1 + 2 * size) + (alloc - blocks[page]) >= block_size) {
+                    if (alloc == nullptr || (1 + 2 * size) + (alloc - blocks[page]) > block_size) {
                         if (page == blocks.size() - 1) {
-                            std::cout << "[MEM] Allocating memory block of size " << (type_size * block_size) << " bytes." << std::endl;
                             blocks.push_back(static_cast<svec_node*>(malloc(type_size * block_size)));
-                            std::cout << "[MEM] Done." << std::endl;
+                            if (blocks.back() == nullptr || blocks.back() == NULL) {
+                                jmaerte::output::LOGGER.err(channel_id,
+                                        "Allocation of a memory block of " + std::to_string(type_size * block_size) + " bytes failed.",
+                                        jmaerte::output::LOGGER.BAD_ALLOC);
+                            }
+                            std::ostringstream address;
+                            std::ostringstream address_end;
+                            address << static_cast<const void*>(blocks.back());
+                            address_end << static_cast<const void*>(blocks.back() + block_size);
+                            jmaerte::output::LOGGER.log(channel_id, "Allocated memory block of size " + std::to_string(type_size * block_size) + " bytes. Starting in " +
+                                     address.str() + " reaching up to " + address_end.str() + ".");
                             if (alloc != nullptr) aligned.push_back(block_size - (alloc - blocks[page]));
                         } else aligned[page] = block_size - (alloc - blocks[page]);
                         alloc = blocks[++page];
                     }
                     s_ap_int_vec v = alloc;
                     alloc += (1 + 2 * size);
+                    SET_FACTORY_ID(v, get_id());
                     return v;
                 }
 
@@ -60,8 +73,10 @@ namespace jmaerte {
 
                 // COPY
                 virtual s_ap_int_vec copy(s_ap_int_vec v) {
-                    s_ap_int_vec res = allocate_vec(1 + 2 * GET_OCC(v));
+                    s_ap_int_vec res = allocate_vec(GET_OCC(v));
                     *res = {.single = v->single};
+                    SET_FACTORY_ID(res, get_id());
+                    SET_SIZE(res, GET_OCC(v));
                     for (int i = 0; i < GET_OCC(v); i++) {
                         num::ASSIGN(AT(res, i), num::COPY(AT(v, i)));
                     }
@@ -85,6 +100,13 @@ namespace jmaerte {
                     for (s_ap_int_vec v : blocks) {
                         std::free(static_cast<void*>(v));
                     }
+                }
+
+                void print() override {
+                    for(int i = 0; i < blocks.size(); i++) {
+                        std::cout << blocks[i] << " ";
+                    }
+                    std::cout << std::endl;
                 }
 
             private:

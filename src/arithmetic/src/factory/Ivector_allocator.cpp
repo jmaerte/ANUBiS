@@ -11,6 +11,7 @@ namespace jmaerte {
 
             vector_allocator::vector_allocator() {
                 ID = factory::dict.push_factory(this);
+                channel_id = jmaerte::output::LOGGER.register_channel("MEM | Factory " + std::to_string(ID), std::cout);
             }
 
         }

@@ -6,6 +6,7 @@
 #define ANUBIS_SUPERBUILD_VECTOR_FACTORY_HPP
 
 #include "Ivector_allocator.hpp"
+#include <output/logger.hpp>
 #include <map>
 #include <stdexcept>
 #include <string>
@@ -37,16 +38,16 @@ namespace jmaerte {
                 vector_factory(const vector_factory&) = delete;
                 void operator=(const vector_factory&) = delete;
 
-
-                vector_factory(std::size_t max_factories): max_factories(max_factories) { }
-
                 vector_allocator* get_factory(s_ap_int_vec& v);
 
                 vector_allocator* get_factory(unsigned int id) {
                     try {
                         return factories.at(id);
                     } catch (const std::out_of_range& e) {
-                        std::cout << "[Mem] ERROR - Tried to access factory that is non-existent!" << std::endl;
+                        jmaerte::output::LOGGER.err(output_channel_id,
+                                                     "Tried to access factory that is non-existent!",
+                                                     jmaerte::output::LOGGER.INVALID_ARG);
+//                        std::cout << "[Mem] ERROR - Tried to access factory that is non-existent!" << std::endl;
                         throw e;
                     }
                 }
@@ -55,12 +56,17 @@ namespace jmaerte {
                     for (unsigned int i = 0; i < max_factories; i++) {
                         if (factories.count(i) == 0) {
                             factories.insert({i, alloc});
-                            std::cout << "[Mem] Factory of ID " << i << " created." << std::endl;
+                            jmaerte::output::LOGGER.log(output_channel_id,
+                                                         "Factory of ID " + std::to_string(i) + " created.");
+//                            std::cout << "[Mem] Factory of ID " << i << " created." << std::endl;
                             return i;
                         }
                     }
-                    std::cout << "[Mem] Error - Factory reached maximum number " << max_factories << " of allocators." << std::endl;
-                    throw std::overflow_error{"[Mem] Error - Factory reached maximum number " + std::to_string(max_factories) + " of allocators."};
+                    jmaerte::output::LOGGER.err(output_channel_id,
+                            "Factory reached maximum number " + std::to_string(max_factories) + " of allocators.",
+                            jmaerte::output::LOGGER.BAD_ALLOC);
+//                    std::cout << "[Mem] Error - Factory reached maximum number " << max_factories << " of allocators." << std::endl;
+//                    throw std::overflow_error{"[Mem] Error - Factory reached maximum number " + std::to_string(max_factories) + " of allocators."};
                 }
 
                 void release_factory(unsigned int id) {
@@ -69,8 +75,17 @@ namespace jmaerte {
                     factories.erase(id);
                 }
 
+                ~vector_factory() {
+                    jmaerte::output::LOGGER.release_channel(output_channel_id);
+                }
+
             private:
                 std::map<unsigned int, vector_allocator*> factories;
+                unsigned int output_channel_id;
+
+                vector_factory(std::size_t max_factories): max_factories(max_factories) {
+                    output_channel_id = jmaerte::output::LOGGER.register_channel("MEM", std::cout);
+                }
 
                 std::size_t max_factories;
             };

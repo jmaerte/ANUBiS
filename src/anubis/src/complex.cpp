@@ -6,6 +6,7 @@
 #include "ANUBiS/complex.hpp"
 #include "calc/computation.hpp"
 #include "data_types/potence/potence.hpp"
+#include "ANUBiS/complex/io.hpp"
 #include <data_types/thread_pool.hpp>
 #include <boost/regex.hpp>
 #include <utility>
@@ -14,10 +15,11 @@
 #include <algebra/matrix.hpp>
 #include <algebra/reduction.hpp>
 #include <arithmetic/factory/stack_allocator.hpp>
+#include <new>
 
 using namespace jmaerte::arith;
 
-static const std::size_t BLOCK_SIZE = 1u << 27;
+static const unsigned long long BLOCK_SIZE = 1u << 27;
 
 static const char LogTable256[256] = {
     #define LT(n) n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n
@@ -28,7 +30,7 @@ static const char LogTable256[256] = {
 
 static unsigned int LOG2(unsigned int v) {
     unsigned r;
-    register unsigned int t, tt;
+    unsigned int t, tt;
 
     if (tt = v >> 16)
     {
@@ -89,9 +91,22 @@ namespace jmaerte {
             return 0;
         }
 
+        int m_compare_to(unsigned int * a, unsigned int * b, int length) {
+            for (int i = 0; i < length; i++) if (a[i] != b[i]) return a[i] - b[i];
+            return 0;
+        }
+
+        int m_compare_to_neg(unsigned int * a, unsigned int * b, int neg, int length) {
+            for (int i = 0; i < length; i++)
+                if (a[i] != b[i + (i >= neg)]) {
+                    return a[i] - b[i + (i >= neg)];
+                }
+            return 0;
+        }
+
         int binary_search(unsigned int * list, unsigned int * simplex, int start, int end, int SIMPLEX_SIZE) {
             if (end == 0 || compare_to(list + (end - 1) * SIMPLEX_SIZE, simplex, SIMPLEX_SIZE) < 0) return end;
-            if (compare_to(simplex, list, SIMPLEX_SIZE) < 0) return 0;
+            if (compare_to(simplex, list + start * SIMPLEX_SIZE, SIMPLEX_SIZE) < 0) return start;
             int min = start;
             int max = end;
             int compare = 0;
@@ -104,17 +119,54 @@ namespace jmaerte {
             return min;
         }
 
+        int mapping_search(unsigned int * list, unsigned int * simplex, int start, int end, int SIMPLEX_SIZE) {
+            if (end == 0 || m_compare_to(list + (end - 1) * SIMPLEX_SIZE, simplex, SIMPLEX_SIZE) < 0) return end;
+            if (m_compare_to(simplex, list + start * SIMPLEX_SIZE, SIMPLEX_SIZE) < 0) return start;
+            int min = start;
+            int max = end;
+            int compare = 0;
+            while (min < max) {
+                int mid = (min + max)/2;
+                if ((compare = m_compare_to(list + mid * SIMPLEX_SIZE, simplex, SIMPLEX_SIZE)) < 0) min = mid + 1;
+                else if (compare > 0) max = mid;
+                else return mid;
+            }
+            return min;
+        }
+
+        int mapping_search_neg(unsigned int * list, unsigned int * simplex, int start, int end, int neg, int SIMPLEX_SIZE) {
+            if (end == 0 || m_compare_to_neg(list + (end - 1) * SIMPLEX_SIZE, simplex, neg, SIMPLEX_SIZE) < 0) return end;
+            if (m_compare_to_neg(list + start * SIMPLEX_SIZE, simplex, neg, SIMPLEX_SIZE) > 0) return start;
+            int min = start;
+            int max = end;
+            int compare = 0;
+            while (min < max) {
+                int mid = (min + max)/2;
+                if ((compare = m_compare_to_neg(list + mid * SIMPLEX_SIZE, simplex, neg, SIMPLEX_SIZE)) < 0) min = mid + 1;
+                else if (compare > 0) max = mid;
+                else return mid;
+            }
+            return min;
+        }
+
+
         int insert(unsigned int * a, int pos, unsigned int *& list, int occupation, int list_size, int SIMPLEX_SIZE) {
-            if (occupation >= list_size) {
-                auto * resized = new unsigned int[list_size * SIMPLEX_SIZE * 2];
-                std::copy(list, list + pos * SIMPLEX_SIZE, resized);
-                if (pos != list_size) {
-                    std::copy(list + pos * SIMPLEX_SIZE, list + occupation * SIMPLEX_SIZE, resized + (pos + 1) * SIMPLEX_SIZE);
+            if (occupation + 1 >= list_size) {
+                try {
+                    auto * resized = new unsigned int[list_size * SIMPLEX_SIZE * 2];
+                    std::copy(list, list + pos * SIMPLEX_SIZE, resized);
+                    if (pos != list_size) {
+                        std::copy(list + pos * SIMPLEX_SIZE, list + occupation * SIMPLEX_SIZE, resized + (pos + 1) * SIMPLEX_SIZE);
+                    }
+
+                    delete[] list;
+                    list = resized;
+                    list_size *= 2;
+                } catch (const std::exception e) {
+                    std::cout << "[Mem] There was an error allocating " << (list_size * SIMPLEX_SIZE * 2) / 1000000 << " mb... Probably not enough RAM available. Quitting." << std::endl;
+                    throw e;
                 }
 
-                delete[] list;
-                list = resized;
-                list_size *= 2;
             } else {
                 if (pos < occupation){
                     std::copy_backward(list + pos * SIMPLEX_SIZE, list + occupation * SIMPLEX_SIZE, list + (occupation + 1) * SIMPLEX_SIZE);
@@ -146,12 +198,14 @@ namespace jmaerte {
          * s_list implementations
          **************************************************************************************************************/
 
-        s_float_matrix s_list::laplacian(int i) {
+        template<bool binary_storage>
+        s_float_matrix s_list<binary_storage>::laplacian(int i) {
             return {};
         }
 
-        void s_list::facet_insert(const std::vector<unsigned int> * v) {
-            std::lock_guard<std::mutex> lockGuard(facet_mutex);
+        template<bool binary_storage>
+        void s_list<binary_storage>::facet_insert(const std::vector<unsigned int> * v) {
+//            std::lock_guard<std::mutex> lockGuard(facet_mutex);
             clear();
             if (v->size() > f.size()) {
                 f.resize(v->size());
@@ -161,44 +215,73 @@ namespace jmaerte {
                 vertices = v->at(v->size() - 1) + 1;
         }
 
-        void s_list::clear() {
+        template<bool binary_storage>
+        void s_list<binary_storage>::clear() {
             clear_map();
             for (int i = 0; i < f.size(); i++) {
                 f[i] = 0;
             }
         }
 
-        void s_list::clear_map() {
+        template<bool binary_storage>
+        s_list<binary_storage>* s_list<binary_storage>::from_file(
+                const std::string &path,
+                int sceleton,
+                const std::string &sep,
+                const std::string &set_openers,
+                const std::string &set_closers
+        ) {
+            return io::complex_from_file(static_cast<std::function<s_list<binary_storage>*(std::string, int)>>([](std::string name, int sceleton) {
+                return new s_list<binary_storage>(std::move(name), sceleton);
+            }), path, sceleton, sep, set_openers, set_closers);
+        }
+
+        template<bool binary_storage>
+        s_list<binary_storage>* s_list<binary_storage>::from_facets(const std::vector<std::vector<unsigned int> *>& facets, std::string name, int sceleton) {
+            return io::complex_from_facets(static_cast<std::function<s_list<binary_storage>*(std::string, int)>>([](std::string name, int sceleton) {
+                return new s_list<binary_storage>(std::move(name), sceleton);
+            }), facets, std::move(name), sceleton);
+        }
+
+        template<bool binary_storage>
+        void s_list<binary_storage>::clear_map() {
             for (auto it = past.begin(); it != past.end(); it++) {
                 delete[] it->second;
             }
             past.clear();
         }
 
-        void s_list::clear_dim(unsigned int i) {
+        template<bool binary_storage>
+        void s_list<binary_storage>::clear_dim(unsigned int i) {
             if (past.find(i) == past.end()) return;
             unsigned int *& el = past.at(i);
             delete[] el;
             past.erase(i);
         }
 
-        unsigned int * s_list::generate(unsigned int dim) {
+        template<bool binary_storage>
+        unsigned int * s_list<binary_storage>::generate(unsigned int dim) {
             if (past.find(dim) != past.end()) return past[dim];
-            int SIMPLEX_SIZE = get_simplex_size();
+            int SIMPLEX_SIZE = binary_storage ? get_simplex_size() : (dim + 1);
 
-            int size = (f.size() <= dim || f[dim] == 0) ? 10 :
-                f[dim];
+            std::cout << "Generating simplices of dimension " << dim << " in " << (binary_storage ? "binary" : "vertex") << " storage model." << std::endl;
+
+            int size = (f.size() <= dim || f[dim] == 0) ? 10 : f[dim];
             auto * list = new unsigned int[size * SIMPLEX_SIZE];
             int filled = 0;
             for (auto& facet : facets) {
+                std::sort(facet.begin(), facet.end(), [](int i, int j) {return i<j;});
                 if (facet.size() < dim + 1) continue;
                 potence<unsigned int> pot {facet, (int) dim + 1};
                 while (!pot.done() && pot.order() == dim + 1) {
                     auto * simplex = new unsigned int[SIMPLEX_SIZE] { };
+                    int i = 0;
                     for (auto it = pot.begin(); it != pot.end(); ++it) {
-                        simplex[*it / UINT_SIZE] |= 1u << (*it % UINT_SIZE);
+                        if (binary_storage) simplex[*it / UINT_SIZE] |= 1u << (*it % UINT_SIZE);
+                        else simplex[i++] = *it;
                     }
-                    int k = binary_search(list, simplex, 0, filled, SIMPLEX_SIZE);
+                    int k = binary_storage ? binary_search(list, simplex, 0, filled, SIMPLEX_SIZE)
+                            : mapping_search(list, simplex, 0, filled, SIMPLEX_SIZE);
                     if (k == filled || !equals(list + k * SIMPLEX_SIZE, simplex, SIMPLEX_SIZE)) {
                         size = insert(simplex, k, list, filled, size, SIMPLEX_SIZE);
                         filled++;
@@ -209,55 +292,65 @@ namespace jmaerte {
             }
 
 //            for (int j = 0; j < filled; j++) {
-//                unsigned int * simplex = list + SIMPLEX_SIZE * j;
-//                for (int i = 0; i < SIMPLEX_SIZE; i++) std::cout << std::bitset<32>(simplex[SIMPLEX_SIZE - i - 1]) << " ";
+//                for (int i = 0; i < dim + 1; i++) std::cout << *(list + SIMPLEX_SIZE * j + i) << " ";
 //                std::cout << std::endl;
 //            }
+
             f[dim] = filled;
             past[dim] = list;
             std::cout << "Generated faces of dimension " << (dim) << "; f_" << (dim) << " = " << f[dim] << "." << std::endl;
             return past[dim];
         }
 
-        std::pair<int, int> s_list::bit_position(int pos) {
+        template<bool binary_storage>
+        std::pair<int, int> s_list<binary_storage>::bit_position(int pos) {
             int index = vertices * pos / (8 * sizeof(unsigned int));
             return {index, (vertices * pos) % (8 * sizeof(unsigned int))};
         }
 
-        bool s_list::calculated(unsigned int dim) {
+        template<bool binary_storage>
+        bool s_list<binary_storage>::calculated(unsigned int dim) {
             return past.find(dim) != past.end();
         }
 
-        s_list::~s_list() {
+        template<bool binary_storage>
+        s_list<binary_storage>::~s_list() {
             clear_map();
         }
 
-        stream<int> s_list::boundary_first(unsigned int dim) {
-            assert(0 < dim && dim < f.size());
+        template<bool binary_storage>
+        stream<int> s_list<binary_storage>::boundary_first(unsigned int dim) {
+            assert(0 <= dim && dim < f.size());
             unsigned int * top = generate(dim);
             unsigned int * low = generate(dim - 1);
-            int SIMPLEX_SIZE = get_simplex_size();
+            int SIMPLEX_SIZE = binary_storage ? get_simplex_size() : (dim + 1);
             return transform(ints_from(0).take(f[dim]), [this, top, low, dim, SIMPLEX_SIZE](int i) {
                 unsigned int * simplex = top + i * SIMPLEX_SIZE;
-                int curr_index = SIMPLEX_SIZE - 1;
-                unsigned int curr = simplex[curr_index];
-                while (curr == 0) curr = *(simplex + --curr_index);
-                unsigned int leading = 1 << log_2(curr);
-                *(simplex + curr_index) ^= leading;
-                int k = binary_search(low, simplex, 0, this->f[dim - 1], SIMPLEX_SIZE);
-                *(simplex + curr_index) |= leading;
+                int k;
+                if (binary_storage) {
+                    int curr_index = SIMPLEX_SIZE - 1;
+                    unsigned int curr = simplex[curr_index];
+                    while (curr == 0) curr = *(simplex + --curr_index);
+                    unsigned int leading = 1 << log_2(curr);
+                    *(simplex + curr_index) ^= leading;
+                    k = binary_search(low, simplex, 0, this->f[dim - 1], SIMPLEX_SIZE);
+                    *(simplex + curr_index) |= leading;
+                } else {
+                    k = mapping_search_neg(low, simplex, 0, this->f[dim - 1], dim, SIMPLEX_SIZE - 1);
+                }
                 return k;
             });
         }
 
-        s_int_matrix s_list::boundary(unsigned int dim) {
+        template<bool binary_storage>
+        s_int_matrix s_list<binary_storage>::boundary(unsigned int dim) {
             assert(0 <= dim && dim < f.size());
             unsigned int * top = generate(dim);
             unsigned int * low;
             if (dim > 0) {
                 low = generate(dim - 1);
             }
-            int SIMPLEX_SIZE = get_simplex_size();
+            int SIMPLEX_SIZE = binary_storage ? get_simplex_size() : (dim + 1);
 
             unsigned int factory_id = arith::vec::factory::REGISTER<arith::vec::stack_allocator<BLOCK_SIZE>>();
 
@@ -268,27 +361,37 @@ namespace jmaerte {
             }) : s_int_matrix(factory_id, f[dim], [this, top, dim, SIMPLEX_SIZE](int i, unsigned int factory_id) {
                 std::vector<std::pair<ULL, std::pair<bool, ULL>>> vec {static_cast<std::size_t>(dim + 1)};
                 unsigned int * simplex = top + i * SIMPLEX_SIZE;
-                int curr_index = 0;
-                unsigned int curr = simplex[0];
-                unsigned int leading;
                 unsigned int k = f[dim - 1];
+                if (binary_storage) {
+                    int curr_index = 0;
+                    unsigned int curr = simplex[0];
+                    unsigned int leading;
 
-                for (int pos = dim; pos >= 0; pos--) {
-                    while (curr == 0) curr = *(simplex + ++curr_index);
-                    leading = ((curr - 1) | curr) ^ (curr - 1);
-                    curr = curr ^ leading; // remove this leading bit from curr.
-                    *(simplex + curr_index) ^= leading;
-                    vec[pos] = std::make_pair(
-                            (ULL) (k = binary_search(this->past[dim - 1], simplex, 0, k, SIMPLEX_SIZE)),
-                            std::make_pair(pos % 2, 1ULL)
-                    );
-                    *(simplex + curr_index) |= leading;
+                    for (int pos = dim; pos >= 0; pos--) {
+                        while (curr == 0) curr = *(simplex + ++curr_index);
+                        leading = ((curr - 1) | curr) ^ (curr - 1);
+                        curr = curr ^ leading; // remove this leading bit from curr.
+                        *(simplex + curr_index) ^= leading;
+                        vec[pos] = std::make_pair(
+                                (ULL) (k = binary_search(this->past[dim - 1], simplex, 0, k, SIMPLEX_SIZE)),
+                                std::make_pair(pos % 2, 1ULL)
+                        );
+                        *(simplex + curr_index) |= leading;
+                    }
+                } else {
+                    for (int pos = 0; pos < dim + 1; pos++) {
+                        vec[dim - pos] = std::make_pair(
+                                (ULL) (k = mapping_search_neg(this->past[dim - 1], simplex, 0, k, pos, SIMPLEX_SIZE - 1)),
+                                std::make_pair(pos % 2, 1ULL)
+                        );
+                    }
                 }
                 return vec::NEW(factory_id, vec);
             });
         }
 
-        s_int_matrix s_list::coboundary(unsigned int dim) {
+        template<bool binary_storage>
+        s_int_matrix s_list<binary_storage>::coboundary(unsigned int dim) {
             assert(0 <= dim && dim < f.size());
             unsigned int * low = generate(dim);
             int SIMPLEX_SIZE = get_simplex_size();
@@ -433,11 +536,13 @@ namespace jmaerte {
             });
         }
 
-        int s_list::get_simplex_size() {
+        template<bool binary_storage>
+        int s_list<binary_storage>::get_simplex_size() {
             return vertices / UINT_SIZE + (vertices % UINT_SIZE == 0 ? 0 : 1);
         }
 
-        std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> s_list::homology(unsigned int dim) {
+        template<bool binary_storage>
+        std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> s_list<binary_storage>::homology(unsigned int dim) {
             auto it_dim = smith_forms.find(dim);
             if (it_dim == smith_forms.end()) {
                 if (dim > 0 && f[dim - 1] == 0) generate(dim - 1);
@@ -467,6 +572,8 @@ namespace jmaerte {
                 it_dim = smith_forms.find(dim + 1);
                 if (it_dim == smith_forms.end()) {
                     if (f[dim + 1] == 0) generate(dim + 1);
+
+                    std::cout << "Calculating lower bound for rank." << std::endl;
 
                     // check if the rank is already its own bound
                     stream<int> first = boundary_first(dim + 1);
@@ -585,6 +692,24 @@ namespace jmaerte {
             delete head;
         }
 
+        s_tree* s_tree::from_file(
+                const std::string &path,
+                int sceleton,
+                const std::string &sep,
+                const std::string &set_openers,
+                const std::string &set_closers
+        ) {
+            return io::complex_from_file(static_cast<std::function<s_tree*(std::string, int)>>([](std::string name, int sceleton) {
+                return new s_tree(name, sceleton);
+            }), path, sceleton, sep, set_openers, set_closers);
+        }
+
+        s_tree *s_tree::from_facets(const std::vector<std::vector<unsigned int> *>& facets, std::string name, int sceleton) {
+            return io::complex_from_facets(static_cast<std::function<s_tree*(std::string, int)>>([](std::string name, int sceleton) {
+                return new s_tree(name, sceleton);
+            }), facets, name, sceleton);
+        }
+
         s_int_matrix s_tree::boundary(unsigned int dim) {
             return jmaerte::algebra::NEW({});
         }
@@ -630,5 +755,14 @@ namespace jmaerte {
             lockGuard.unlock();
             return children[*it]->_insert(++it, end, nullptr);
         }
+
+
+
+        /***************************************************************************************************************
+         * INSANTIATIONS
+         **************************************************************************************************************/
+        template class s_list<true>;
+        template class s_list<false>;
+
     }
 };

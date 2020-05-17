@@ -10,28 +10,27 @@
 namespace jmaerte {
     namespace anubis {
         namespace io {
+            template<typename complex_constructor>
+            auto complex_from_file(
+                    complex_constructor constructor,
+                    const std::string & path,
+                    int sceleton,
+                    const std::string & sep,
+                    const std::string & set_openers,
+                    const std::string & set_closers
+            ) -> typename std::result_of<complex_constructor(std::string, int)>::type;
 
-            namespace s_list {
-                static s_list * from_file(
-                        const std::string &,
-                        int sceleton = -2,
-                        const std::string & sep = ",",
-                        const std::string & set_openers = "\\[{",
-                        const std::string & set_closers = "\\]}");
-                static s_list* from_facets(std::vector<std::vector<unsigned int>*> &facets, std::string name, int sceleton = -1);
-            }
-
-            namespace s_tree {
-                static s_tree * from_file(
-                        const std::string &,
-                        int sceleton = -2,
-                        const std::string & sep = ",",
-                        const std::string & set_openers = "\\[{",
-                        const std::string & set_closers = "\\]}");
-                static s_tree * from_facets(std::vector<std::vector<unsigned int>*> &facets, std::string name, int sceleton = -1);
-            }
+            template<typename complex_constructor>
+            auto complex_from_facets(
+                    complex_constructor constructor,
+                    const std::vector<std::vector<unsigned int> *> &facets,
+                    std::string name,
+                    int sceleton
+            ) -> typename std::result_of<complex_constructor(std::string, int)>::type;
         }
     }
 }
+
+#include "../../../src/complex/io.cpp"
 
 #endif //ANUBIS_SUPERBUILD_IO_HPP

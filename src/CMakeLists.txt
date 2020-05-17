@@ -29,6 +29,7 @@ ADD_DEFINITIONS(-DBOOST_THREAD_VERSION=4
                 -DBOOST_THREAD_DONT_PROVIDE_FUTURE)
 REMOVE_DEFINITIONS(-DBOOST_NO_EXCEPTIONS)
 
+add_subdirectory(output)
 add_subdirectory(data_struc)
 add_subdirectory(arithmetic)
 add_subdirectory(algebra)

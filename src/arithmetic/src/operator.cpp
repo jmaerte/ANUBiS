@@ -236,109 +236,129 @@ namespace jmaerte {
              */
             void ADD_ALL_SINGLE(s_ap_int_vec& a, int start_a, num::ap_int lambda_num, s_ap_int_vec b, int start_b) {
 //                std::cout << "add all single " << GET_OCC(b) << std::endl;
-                ULL occ = GET_OCC(a);
-                num::ap_int b_end = AT(b, GET_OCC(b));
 
-                s_ap_int_vec a_cpy = new svec_node[2 * (occ - start_a)];
-                std::copy(vec::AT(a, start_a), vec::AT(a, occ), a_cpy);
-                num::ap_int cpy_end = a_cpy + 2 * (occ - start_a);
+                int occ = GET_OCC(a);
+                int occ_b = GET_OCC(b);
+
+                num::ap_int it = AT(a, start_a);
+
+
+//                std::cout << "a: " << a << std::endl;
+//                std::cout << "a_end: " << (a + 1 + 2 * GET_SIZE(a)) << std::endl;
+
+                int size_cpy = (occ - start_a);
+
+//                svec_node* a_cpy = new svec_node[2 * size_cpy];
+                svec_node* a_cpy = static_cast<svec_node*>(malloc(2 * size_cpy * sizeof(svec_node)));
+
+                memcpy(static_cast<void*>(a_cpy), static_cast<void*>(a + 1 + 2 * start_a), 2 * size_cpy * sizeof(svec_node));
+
+//                std::copy(it, AT(a, occ), a_cpy);
+
+                SET_OCC(a, start_a);
+                occ = start_a;
 
                 bool multi = false;
 
                 ULL lambda = (lambda_num + 1)->single;
                 bool lambda_sign = num::GET_SIGN(lambda_num);
 
-                num::ap_int it = AT(a, start_a);
-                num::ap_int it_cpy = a_cpy;
-                num::ap_int j = AT(b, start_b);
                 ULL pos_a, pos_b;
+                int i = 0, j = start_b;
                 ULL overflow;
 
-                occ = start_a;
-                for (; it_cpy != cpy_end && j != b_end; occ++) {
+                for (; i < size_cpy && j != occ_b; occ++) {
+//                    std::cout << "it: " << it << std::endl;
+//                    std::cout << "it_cpy: " << it_cpy << std::endl;
+                    if (occ >= GET_SIZE(a)) {
+                        ENLARGE_RANGE(a, occ);
+                        it = AT(a, occ);
+//                        std::cout << "a is now " << a << " and it is " << it << std::endl;
+                    }
 //                    std::cout << i << " " << (b_end - j) / 2 << std::endl;
-                    if ((pos_a = (it_cpy)->single >> 2) < (pos_b = j->single >> 2)) {
-                        it->single = it_cpy->single;
-                        (it+1)->single = (it_cpy+1)->single;
-                        it += 2;
-                        it_cpy += 2;
+                    if ((pos_a = num::GET_POS(a_cpy + 2 * i)) < (pos_b = num::GET_POS(b + 1 + 2 * j))) {
+                        a[1 + 2 * occ] = a_cpy[2 * i];
+                        a[2 + 2 * occ] = a_cpy[2 * i + 1];
+                        i++;
                     } else if (pos_a > pos_b) {
-                        if (occ + 1 > GET_SIZE(a)) {
-                            ENLARGE_RANGE(a, occ);
-                            it = AT(a, occ);
-                        }
 //                        std::copy_backward(it, a_end, a_end + 2);
-                        *it = (svec_node){.single = 1ULL | (num::GET_SIGN(j) ^ lambda_sign ? 1ULL : 0ULL) << 1 | pos_b << 2};
-                        *(it + 1) = (svec_node){.single = mul((j + 1)->single, lambda, &overflow)};
+                        a[1 + 2 * occ] = (svec_node){.single = 1ULL | (num::GET_SIGN(b + 1 + 2 * j) ^ lambda_sign ? 1ULL : 0ULL) << 1 | pos_b << 2};
+                        a[2 + 2 * occ] = (svec_node){.single = mul((b + 2 + 2 * j)->single, lambda, &overflow)};
+//                        *it = (svec_node){.single = 1ULL | (num::GET_SIGN(j) ^ lambda_sign ? 1ULL : 0ULL) << 1 | pos_b << 2};
+//                        *(it + 1) = (svec_node){.single = mul((j + 1)->single, lambda, &overflow)};
                         if (overflow) {
                             num::MAKE_MULTI(it, overflow);
                             multi = true;
                         }
-                        j += 2;
-                        it += 2;
+                        j++;
                     } else {
-                        ULL x = mul(lambda, (j + 1)->single, &overflow);
-                        bool sign = lambda_sign ^ num::GET_SIGN(j);
-                        if (sign ^ num::GET_SIGN(it_cpy)) {
+                        ULL x = mul(lambda, (b + 2 + 2 * j)->single, &overflow);
+                        bool sign = lambda_sign ^ num::GET_SIGN(b + 1 + 2 * j);
+                        if (sign ^ num::GET_SIGN(a_cpy + 2 * i)) {
                             if (overflow) {
-                                num::SWITCH_SIGN(it_cpy);
-                                if (x < (it_cpy + 1)->single) {
+                                num::SWITCH_SIGN(a_cpy + 2 * i);
+                                if (x < (a_cpy + 2 * i + 1)->single) {
                                     overflow--;
                                 }
-                                (it_cpy + 1)->single = x - (it_cpy + 1)->single;
+                                (a_cpy + 2 * i + 1)->single = x - (a_cpy + 2 * i + 1)->single;
                             } else {
-                                if ((it_cpy + 1)->single < x) {
-                                    num::SWITCH_SIGN(it_cpy);
-                                    (it_cpy + 1)->single = x - (it_cpy + 1)->single;
-                                } else (it_cpy + 1)->single -= x;
+                                if ((a_cpy + 2 * i + 1)->single < x) {
+                                    num::SWITCH_SIGN(a_cpy + 2 * i);
+                                    (a_cpy + 2 * i + 1)->single = x - (a_cpy + 2 * i + 1)->single;
+                                } else (a_cpy + 2 * i + 1)->single -= x;
                             }
-                        } else overflow += adc(0, (it_cpy + 1)->single, x, &(it_cpy + 1)->single); // can't overflow itself
+                        } else {
+                            overflow += adc(0, (a_cpy + 2 * i + 1)->single, x, &(a_cpy + 2 * i + 1)->single); // can't overflow itself
+                        }
                         if (overflow) {
-                            num::MAKE_MULTI(it_cpy, overflow);
+                            num::MAKE_MULTI(a_cpy + 2 * i, overflow);
                             multi = true;
-                        } else if ((it_cpy + 1)->single == 0ULL) {
+                        } else if ((a_cpy + 2 * i + 1)->single == 0ULL) {
                             occ--;
-                            j += 2;
-                            it_cpy += 2;
+                            i++;
+                            j++;
                             continue;
                         }
-                        *it = *it_cpy;
-                        *(it + 1) = *(it_cpy + 1);
-                        it += 2;
-                        j += 2;
-                        it_cpy += 2;
+                        a[1 + 2 * occ] = a_cpy[2 * i];
+                        a[2 + 2 * occ] = a_cpy[2 * i + 1];
+                        i++;
+                        j++;
                     }
                 }
 
-                while(it_cpy != cpy_end) {
-                    if (occ + 1 > GET_SIZE(a)) {
+                while(i < size_cpy) {
+//                    std::cout << "cpy - it: " << it << std::endl;
+//                    std::cout << "it_cpy: " << it_cpy << std::endl;
+                    if (occ >= GET_SIZE(a)) {
                         ENLARGE_RANGE(a, occ);
                         it = AT(a, occ);
+//                        std::cout << "a is now " << a << " and it is " << it << std::endl;
                     }
-                    it->single = it_cpy->single;
-                    (it + 1)->single = (it_cpy + 1)->single;
-                    it += 2;
-                    it_cpy += 2;
+                    a[1 + 2 * occ] = a_cpy[2 * i];
+                    a[2 + 2 * occ] = a_cpy[2 * i + 1];
+                    i++;
                     occ++;
                 }
-                while(j != b_end) {
-                    if (occ + 1 > GET_SIZE(a)) {
+                while(j < occ_b) {
+//                    std::cout << "it: " << it << std::endl;
+//                    std::cout << "j: " << j << std::endl;
+                    if (occ >= GET_SIZE(a)) {
                         ENLARGE_RANGE(a, occ);
                         it = AT(a, occ);
                     }
-                    pos_b = j->single >> 2;
-                    *it = (svec_node){.single = 1ULL | (num::GET_SIGN(j) ^ lambda_sign ? 1ULL : 0ULL) << 1 | pos_b << 2};
-                    *(it + 1) = (svec_node){.single = mul((j + 1)->single, lambda, &overflow)};
+                    pos_b = ((b + 1 + 2 * j)->single >> 2);
+                    a[1 + 2 * occ] = (svec_node){.single = 1ULL | (num::GET_SIGN(b + 1 + 2 * j) ^ lambda_sign ? 1ULL : 0ULL) << 1 | pos_b << 2};
+                    a[2 + 2 * occ] = (svec_node){.single = mul((b + 2 + 2 * j)->single, lambda, &overflow)};
                     if (overflow) {
                         num::MAKE_MULTI(it, overflow);
                         multi = true;
                     }
-                    j += 2;
-                    it += 2;
+                    j++;
                     occ++;
                 }
 
-                delete[] a_cpy;
+//                delete[] a_cpy;
+                free(static_cast<void*>(a_cpy));
 
                 // update vector flags:
                 SET_OCC(a, occ);

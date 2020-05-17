@@ -32,10 +32,14 @@ namespace jmaerte {
                 // FREE
                 virtual void free() = 0;
 
+                virtual void print() { }
+
                 unsigned int get_id() {
                     return ID;
                 }
 
+            protected:
+                unsigned int channel_id;
             private:
                 unsigned int ID;
             };

@@ -42,6 +42,14 @@ public:
     bool done();
     void operator++();
 
+    potence * copy() {
+        potence * pt = new potence(masked, k);+
+        pt->_done = _done;
+        pt->N = N;
+        pt->mask = mask;
+        return pt;
+    }
+
     int order() {
         return k;
     }

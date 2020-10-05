@@ -43,7 +43,7 @@ public:
     void operator++();
 
     potence * copy() {
-        potence * pt = new potence(masked, k);+
+        potence * pt = new potence(masked, k);
         pt->_done = _done;
         pt->N = N;
         pt->mask = mask;

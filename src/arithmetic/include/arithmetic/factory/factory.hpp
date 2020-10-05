@@ -20,9 +20,9 @@ namespace jmaerte {
             class vector_allocator;
 
             namespace factory {
-                static inline unsigned int MAX_FACTORIES = 8u;
+                extern ARITHMETIC_EXPORT unsigned int MAX_FACTORIES;
 
-                extern vector_factory& dict;
+                extern ARITHMETIC_EXPORT vector_factory& dict;
             }
 
             /**

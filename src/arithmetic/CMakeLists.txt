@@ -8,19 +8,19 @@ set(${LIBRARY_TARGET_NAME}_SRC
         src/misc/multiply.cpp
         src/misc/modular.cpp
         src/factory/factory.cpp
-        src/factory/Ivector_allocator.cpp)
+        src/factory/Ivector_allocator.cpp
+        src/factory/allocators.cpp)
 
 set(${LIBRARY_TARGET_NAME}_PUBLIC_HDR
         include/arithmetic/operator.hpp
         include/arithmetic/typedef.hpp
+        include/arithmetic/constants.hpp
         include/arithmetic/factory/factory.hpp
         include/arithmetic/factory/heap_allocator.hpp
         include/arithmetic/factory/stack_allocator.hpp
         include/arithmetic/factory/Ivector_allocator.hpp)
 
 set(${LIBRARY_TARGET_NAME}_PRIVATE_HDR
-        src/constants.hpp
-        src/operator.hpp
         src/arithmetic.hpp
         src/misc/hardware/hardware.hpp
         src/misc/inl/auxiliary.inl

@@ -52,14 +52,18 @@ namespace jmaerte {
         public:
 
             virtual void facet_insert(const std::vector<unsigned int> *) = 0;
+            virtual complex* im_insert(int * simplex);
             std::vector<double> laplacian_spectrum(int i);
             virtual std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> homology(unsigned int dim) = 0;
 
             std::vector<int> f_vector();
+            virtual bool is_external(int * simplex);
 
             std::string get_name() {
                 return name;
             }
+
+            static complex* new_empty();
 
             virtual unsigned int get_dim() = 0;
         };

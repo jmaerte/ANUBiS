@@ -7,6 +7,7 @@
 
 #include "Ivector_allocator.hpp"
 #include "../operator.hpp"
+#include <ARITHMETIC_EXPORT.h>
 #include <cstdlib>
 #include <sstream>
 
@@ -21,8 +22,11 @@ namespace jmaerte {
              * @tparam block_size how many svec_nodes fit in there.
              */
             template<std::size_t block_size>
-            class stack_allocator : public vector_allocator {
+            class ARITHMETIC_EXPORT stack_allocator : public vector_allocator {
             public:
+
+                stack_allocator();
+
                 ~stack_allocator() {
                     this->free();
                 }

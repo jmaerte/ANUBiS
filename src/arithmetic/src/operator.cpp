@@ -4,13 +4,13 @@
 
 #include "arithmetic/operator.hpp"
 #include "arithmetic.hpp"
-#include "constants.hpp"
+#include "../include/arithmetic/constants.hpp"
 #include <cstdlib>
 
 namespace jmaerte {
     namespace arith {
 
-        double ELAPSED;
+        double ELAPSED = 0.0;
 
         namespace num {
             /*

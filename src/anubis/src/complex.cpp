@@ -40,6 +40,7 @@ static unsigned int LOG2(unsigned int v) {
     {
         r = (t = v >> 8) ? 8 + LogTable256[t] : LogTable256[v];
     }
+    return r;
 }
 
 

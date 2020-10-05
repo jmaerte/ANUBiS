@@ -7,7 +7,7 @@
 
 #include "arithmetic/operator.hpp"
 #include "arithmetic.hpp"
-#include "aux/hardware/hardware.hpp"
+#include "misc/hardware/hardware.hpp"
 #include "constants.hpp"
 #include <algorithm>
 #include <vector>

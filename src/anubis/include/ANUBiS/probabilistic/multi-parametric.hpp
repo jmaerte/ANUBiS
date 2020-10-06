@@ -15,7 +15,7 @@ namespace jmaerte {
             class ANUBIS_EXPORT mp_experiment {
             public:
             struct node {
-                complex* complex;
+                complex* m_complex;
                 double prob;
                 bool is_P;
                 std::vector<node*> children;

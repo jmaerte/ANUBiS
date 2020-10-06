@@ -30,13 +30,13 @@ namespace jmaerte {
                     int * simplex = new int[pot->order()];
                     for (int i = 0; i < pot->order(); i++) simplex[i] = pot->get(i);
 
-                    if (node->complex->is_external(simplex)) {
+                    if (node->m_complex->is_external(simplex)) {
                         mp_experiment::node * next = new mp_experiment::node;
                         node->children.push_back(next);
-                        next->complex = node->complex->im_insert(simplex);
+                        next->m_complex = node->m_complex->im_insert(simplex);
                         next->parent = node;
                         next->prob = exp->p(pot->order() - 1) * node->prob;
-                        next->is_P = exp->P(next->complex);
+                        next->is_P = exp->P(next->m_complex);
 
                         potence<int>* pt = pot->copy();
                         delete simplex;
@@ -56,9 +56,9 @@ namespace jmaerte {
                 }
 
                 root = new mp_experiment::node;
-                root->complex = complex::new_empty();
+                root->m_complex = s_list<true>::from_facets({}, "complex", -1);
                 root->prob = 1.0;
-                root->is_P = P(root->complex);
+                root->is_P = P(root->m_complex);
                 root->parent = nullptr;
 
                 std::vector<int> vertices (n);

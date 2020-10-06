@@ -11,6 +11,7 @@
 namespace jmaerte {
     namespace arith {
         namespace vec {
+            
             class ARITHMETIC_EXPORT std_factory : public vector_allocator {
             public:
 

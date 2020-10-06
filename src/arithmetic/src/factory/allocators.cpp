@@ -15,6 +15,7 @@ namespace jmaerte {
             stack_allocator<block_size>::stack_allocator() : vector_allocator() {}
 
             template class stack_allocator<2048>;
+            template class stack_allocator<134217728>;
         }
     }
 }

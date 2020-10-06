@@ -52,18 +52,16 @@ namespace jmaerte {
         public:
 
             virtual void facet_insert(const std::vector<unsigned int> *) = 0;
-            virtual complex* im_insert(int * simplex);
+            virtual complex* im_insert(int * simplex) = 0;
             std::vector<double> laplacian_spectrum(int i);
             virtual std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> homology(unsigned int dim) = 0;
 
             std::vector<int> f_vector();
-            virtual bool is_external(int * simplex);
+            virtual bool is_external(int * simplex) = 0;
 
             std::string get_name() {
                 return name;
             }
-
-            static complex* new_empty();
 
             virtual unsigned int get_dim() = 0;
         };
@@ -95,6 +93,9 @@ namespace jmaerte {
         public:
 
             ~s_list();
+
+            complex* im_insert(int * simplex) override;
+            bool is_external(int * simplex) override;
 
             void facet_insert(const std::vector<unsigned int> *) override;
 
@@ -160,6 +161,9 @@ namespace jmaerte {
         public:
 
             ~s_tree();
+
+            complex* im_insert(int * simplex) override;
+            bool is_external(int * simplex) override;
 
             std::mutex chains_mutex;
             std::vector<std::map<int, node *> *> chains;

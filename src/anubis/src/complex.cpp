@@ -182,7 +182,6 @@ namespace jmaerte {
          * Complex implementations
          **************************************************************************************************************/
 
-
         std::vector<double> complex::laplacian_spectrum(int i) {
             return {};
 //            return eigen(laplacian(i), f[i]);
@@ -217,6 +216,16 @@ namespace jmaerte {
         }
 
         template<bool binary_storage>
+        complex* s_list<binary_storage>::im_insert(int * simplex) {
+            // TODO
+        }
+
+        template<bool binary_storage>
+        bool s_list<binary_storage>::is_external(int * simplex) {
+            // TODO
+        }
+
+        template<bool binary_storage>
         void s_list<binary_storage>::clear() {
             clear_map();
             for (int i = 0; i < f.size(); i++) {
@@ -232,14 +241,14 @@ namespace jmaerte {
                 const std::string &set_openers,
                 const std::string &set_closers
         ) {
-            return io::complex_from_file(static_cast<std::function<s_list<binary_storage>*(std::string, int)>>([](std::string name, int sceleton) {
+            return io::complex_from_file<std::function<s_list<binary_storage>*(std::string, int)>>(static_cast<std::function<s_list<binary_storage>*(std::string, int)>>([](std::string name, int sceleton) {
                 return new s_list<binary_storage>(std::move(name), sceleton);
             }), path, sceleton, sep, set_openers, set_closers);
         }
 
         template<bool binary_storage>
         s_list<binary_storage>* s_list<binary_storage>::from_facets(const std::vector<std::vector<unsigned int> *>& facets, std::string name, int sceleton) {
-            return io::complex_from_facets(static_cast<std::function<s_list<binary_storage>*(std::string, int)>>([](std::string name, int sceleton) {
+            return io::complex_from_facets<std::function<s_list<binary_storage>*(std::string, int)>>(static_cast<std::function<s_list<binary_storage>*(std::string, int)>>([](std::string name, int sceleton) {
                 return new s_list<binary_storage>(std::move(name), sceleton);
             }), facets, std::move(name), sceleton);
         }
@@ -713,6 +722,14 @@ namespace jmaerte {
 
         s_int_matrix s_tree::boundary(unsigned int dim) {
             return jmaerte::algebra::NEW({});
+        }
+
+        complex * s_tree::im_insert(int * simplex) {
+            // TODO
+        }
+
+        bool s_tree::is_external(int * simplex) {
+            // TODO
         }
 
         s_int_matrix s_tree::coboundary(unsigned int dim) {

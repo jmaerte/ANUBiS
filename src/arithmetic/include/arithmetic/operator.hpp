@@ -110,6 +110,8 @@ namespace jmaerte {
             ARITHMETIC_EXPORT ap_int    iSQR(ap_int a);
 
             ARITHMETIC_EXPORT ap_int    DIV(ap_int a, ap_int b);
+            ARITHMETIC_EXPORT ULL       C_DIV(ap_int a, ULL b);
+            ARITHMETIC_EXPORT ap_int    iC_DIV(ap_int a, ULL b);
         }
 
 /***********************************************************************************************************************

@@ -124,7 +124,7 @@ namespace jmaerte {
                 std::cout << "Remainder matrix has " << n << " rows." << std::endl;
 
                 for (int i = 0; i < n; i++) {
-                    if (i % 100 == 0) std::cout << "\rCalculating Smith Normalform " << i << " / " << remainder.size();
+                    if (i % 100 == 0) std::cout << "Calculating Smith Normalform " << i << " / " << remainder.size() << std::endl;
 //        int j = -1;
                     vec::s_ap_int_vec temp;
 //        std::vector<int> indices;
@@ -149,6 +149,7 @@ namespace jmaerte {
                     if (first_remainder.size() == 0) break;
                     int block_size = 0;
                     int pos = first_remainder[0];
+                    // we know that first_remainder is ordered and thus can cut off the beginning:
                     for (; block_size < first_remainder.size(); block_size++) {
                         if (first_remainder[block_size] != pos) break;
                     }
@@ -171,12 +172,51 @@ namespace jmaerte {
                             int occ = 0;
 //                num::ap_int pre = num::PRECOMPUTE_SDIV_DIVISOR(vec::AT(remainder[i], 0));
                             for (int row = 1; row < block_size; row++) {
-                                num::ap_int lambda = num::DIV(vec::AT(remainder[row], 0), vec::AT(remainder[i], 0));
-                                num::SWITCH_SIGN(lambda);
-                                vec::ADD(remainder[row], 1, lambda, remainder[i], 1);
+                                if (vec::GET_IS_ALL_SINGLE(remainder[0])) {
+                                    if (num::IS_SINGLE(vec::AT(remainder[row], 0))) {
+                                        num::ap_int lambda = num::NEW(
+                                                !(num::GET_SIGN(vec::AT(remainder[row], 0)) ^
+                                                  num::GET_SIGN(vec::AT(remainder[0], 0))),
+                                                *num::ABS(vec::AT(remainder[row], 0)) / *num::ABS(vec::AT(remainder[0], 0))
+                                        );
+                                        if (vec::GET_IS_ALL_SINGLE(remainder[row])) {
+                                            vec::ADD_ALL_SINGLE(remainder[row], 0, lambda, remainder[0], 0);
+                                        } else {
+                                            vec::ADD_SINGLE(remainder[row], 0, lambda, remainder[0], 0);
+                                        }
+                                    } else {
+                                        num::ap_int lambda = num::iC_DIV(vec::AT(remainder[row], 0), *num::ABS(vec::AT(remainder[0], 0)));
+                                        if (!num::GET_SIGN(vec::AT(remainder[0], 0))) num::SWITCH_SIGN(lambda);
+                                        // vector remainder[row] can't be all single...
+                                        vec::ADD_SINGLE(remainder[row], 1, lambda, remainder[0], 1);
+                                    }
+                                } else {
+                                    if (num::IS_SINGLE(vec::AT(remainder[0], 0))) {
+                                        if (num::IS_SINGLE(vec::AT(remainder[row], 0))) {
+                                            num::ap_int lambda = num::NEW(
+                                                    !(num::GET_SIGN(vec::AT(remainder[row], 0)) ^
+                                                      num::GET_SIGN(vec::AT(remainder[0], 0))),
+                                                    *num::ABS(vec::AT(remainder[row], 0)) / *num::ABS(vec::AT(remainder[0], 0))
+                                            );
+                                            if (vec::GET_IS_ALL_SINGLE(remainder[row])) {
+                                                vec::ADD_SINGLE_SCALAR(remainder[row], 0, lambda, remainder[0], 0);
+                                            } else {
+                                                vec::ADD(remainder[row], 0, lambda, remainder[0], 0);
+                                            }
+                                        } else {
+                                            num::ap_int lambda = num::iC_DIV(vec::AT(remainder[row], 0), *num::ABS(vec::AT(remainder[0], 0)));
+                                            if (!num::GET_SIGN(vec::AT(remainder[0], 0))) num::SWITCH_SIGN(lambda);
+                                            vec::ADD(remainder[row], 1, lambda, remainder[0], 1);
+                                        }
+                                    } else {
+                                        // the first of the others can't be single neither..
+                                        num::ap_int lambda = num::DIV(vec::AT(remainder[row], 0), vec::AT(remainder[0], 0));
+                                        num::SWITCH_SIGN(lambda);
+                                        vec::ADD(remainder[row], 1, lambda, remainder[0], 1);
+                                    }
+                                }
                                 int next_pos;
                                 if (vec::GET_OCC(remainder[row]) == 0) {
-                                    // vector got reduced to 0
                                     vec::DELETE(remainder[row]);
                                     remainder.erase(remainder.begin() + row);
                                     first_remainder.erase(first_remainder.begin() + row);
@@ -195,11 +235,44 @@ namespace jmaerte {
                                     }
                                 }
                             }
+//                            for (int row = 1; row < block_size; row++) {
+//                                num::ap_int lambda = num::DIV(vec::AT(remainder[row], 0), vec::AT(remainder[i], 0));
+//                                num::SWITCH_SIGN(lambda);
+//                                vec::ADD(remainder[row], 1, lambda, remainder[i], 1);
+//                                int next_pos;
+//                                if (vec::GET_OCC(remainder[row]) == 0) {
+//                                    // vector got reduced to 0
+//                                    vec::DELETE(remainder[row]);
+//                                    remainder.erase(remainder.begin() + row);
+//                                    first_remainder.erase(first_remainder.begin() + row);
+//                                    row--;
+//                                    block_size--;
+//                                } else {
+//                                    if ((next_pos = num::GET_POS(vec::AT(remainder[row], 0))) != pos) {
+//                                        temp = remainder[row];
+//                                        k = util::binary_search(first_remainder, next_pos, block_size, first_remainder.size(), util::compare_ints);
+//                                        std::copy(first_remainder.begin() + row + 1, first_remainder.begin() + k, first_remainder.begin() + row);
+//                                        std::copy(remainder.begin() + row + 1, remainder.begin() + k, remainder.begin() + row);
+//                                        first_remainder[k] = next_pos;
+//                                        remainder[k] = temp;
+//                                        block_size--;
+//                                        row--;
+//                                    }
+//                                }
+//                            }
 //                num::DELETE(pre);
                             col = block_size <= 1;
                         } else {
+                            std::cout << "row" << std::endl;
                             temp = remainder[0];
-                            vec::MOD(temp);
+                            if  (vec::GET_IS_ALL_SINGLE(temp)) {
+                                for (int i = 1; i < vec::GET_OCC(temp); i++) {
+                                    (vec::AT(temp, i) + 1)->single %= (vec::AT(temp, 0) + 1)->single;
+                                    if ((vec::AT(temp, i) + 1)->single == 0ULL) vec::DELETE_POS(temp, i--);
+                                }
+                            } else {
+                                vec::MOD(temp);
+                            }
                             if (vec::GET_OCC(temp) == 1) {
                                 auto it = result.find(vec::AT(temp, 0));
                                 if (it == result.end()) {

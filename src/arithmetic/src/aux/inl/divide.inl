@@ -30,6 +30,29 @@ namespace jmaerte {
                     return remainder;
                 }
 
+                /**
+                 * Sets a to be the remainder and returns the quotient
+                 * @param a
+                 * @param b
+                 * @return
+                 */
+                static inline ap_int iC_DIV(ap_int a, ULL b) {
+                    int n = GET_OCC(a);
+                    ap_int res = NEW(n, GET_SIGN(a), 0ULL);
+                    ULL remainder = aux::GET_LEADING(a) % b;
+                    ULL quot = aux::GET_LEADING(a) / b;
+                    aux::SET(res, n - 1, quot);
+                    for (int i = n - 2; i >= 0; i--) {
+                        quot = udiv(remainder, aux::GET(a, i), b, &remainder);
+                        aux::SET(res, i, quot);
+                    }
+                    // replace a by remainder.
+                    ap_int x = NEW(GET_SIGN(a), remainder);
+                    OVERWRITE(a, x);
+                    DELETE(x);
+                    return res;
+                }
+
                 static inline bool DIV_TEST(ULL* prod_leading, ULL* prod_second, ULL leading, ULL second, ULL q, ULL curr_a_leading, ULL curr_a_second, ULL curr_a_third) {
                     set_mul(prod_leading, leading, q);
                     set_mul(prod_second, second, q);

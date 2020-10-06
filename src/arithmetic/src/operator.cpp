@@ -18,11 +18,23 @@ namespace jmaerte {
              */
 
             int COMPARE_ABS(ap_int const n_a, ap_int const n_b) {
-                int occ = GET_OCC(n_a);
-                if (occ != GET_OCC(n_b)) return occ - GET_OCC(n_b);
-                auto a = ABS(n_a) + occ;
-                auto b = ABS(n_b) + occ;
-                return aux::COMPARE_RAW(a, b, occ);
+                if (num::IS_SINGLE(n_a)) {
+                    if (num::IS_SINGLE(n_b)) {
+                        if ((n_a+1)->value != (n_b+1)->value) {
+                            return (n_a+1)->value > (n_b+1)->value ? 1 : -1;
+                        }
+                        return 0;
+                    } else return -1;
+                } else {
+                    if (num::IS_SINGLE(n_b)) return 1;
+                    else {
+                        int occ = GET_OCC(n_a);
+                        if (occ != GET_OCC(n_b)) return occ - GET_OCC(n_b);
+                        auto a = ABS(n_a) + occ;
+                        auto b = ABS(n_b) + occ;
+                        return aux::COMPARE_RAW(a, b, occ);
+                    }
+                }
             }
 
             bool comp::SIGNED_COMPARATOR::operator()(ap_int const &a, ap_int const &b) const {
@@ -189,6 +201,14 @@ namespace jmaerte {
 
             ap_int DIV(ap_int a, ap_int b) {
                 return aux::E_DIV(a, b);
+            }
+
+            ULL C_DIV(ap_int a, ULL b) {
+                return aux::C_DIV(a, b);
+            }
+
+            ap_int iC_DIV(ap_int a, ULL b) {
+                return aux::iC_DIV(a, b);
             }
         }
 

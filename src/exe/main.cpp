@@ -31,7 +31,7 @@ int main() {
 //    auto c = jmaerte::anubis::s_tree::from_file(getenv("HOME") + slash + "Downloads" + slash + "c88");
 //
 //
-    auto c = jmaerte::anubis::s_list<false>::from_file(getenv("HOME") + slash + "Downloads" + slash + "outtorsion");
+    auto c = jmaerte::anubis::s_list<false>::from_file(getenv("HOME") + slash + "Downloads" + slash + "c88");
 
     std::cout << "Dimension of " << c->get_name() << " is " << c->get_dim() << "." << std::endl;
 

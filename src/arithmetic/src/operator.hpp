@@ -7,15 +7,16 @@
 
 #include "arithmetic/operator.hpp"
 #include "arithmetic.hpp"
-#include "aux/hardware/hardware.hpp"
-#include "constants.hpp"
+#include "misc/hardware/hardware.hpp"
 #include <algorithm>
 #include <vector>
 #include <cstdlib>
 #include <bitset>
 #include <stdexcept>
 #include <string>
+#include "arithmetic/constants.hpp"
 #include "arithmetic/factory/factory.hpp"
+#include "arithmetic/factory/allocators.hpp"
 
 namespace jmaerte {
     namespace arith {

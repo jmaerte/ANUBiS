@@ -52,6 +52,8 @@ namespace jmaerte {
 
                 std::vector<unsigned int> facet {};
 
+                int internal_set_openers = 0;
+
                 while (std::getline(file, line)) {
                     std::istringstream iss(line);
                     std::string curr;
@@ -73,12 +75,10 @@ namespace jmaerte {
                                     complex_opened = true;
                                 }
                             } else {
-                                if (set_openers.find(c) != std::string::npos) {
-                                    set_opened = true;
-                                    curr = "";
-                                } else if (set_opened) {
-                                    if ((sep + set_closers).find(c) != std::string::npos) {
-
+                                if (set_opened) {
+                                    if (set_openers.find(c) != std::string::npos) internal_set_openers++;
+                                    else if (internal_set_openers > 0 && set_closers.find(c) != std::string::npos) internal_set_openers--;
+                                    else if (internal_set_openers == 0 && (sep + set_closers).find(c) != std::string::npos) {
                                         // add current label to list
                                         if (labels.find(curr) == labels.end()) labels[curr] = i_labels++;
                                         facet.push_back(labels[curr]);
@@ -92,6 +92,10 @@ namespace jmaerte {
                                         }
                                     } else curr += c;
                                 } else {
+                                    if (set_openers.find(c) != std::string::npos) {
+                                        set_opened = true;
+                                        curr = "";
+                                    }
                                     if (set_closers.find(c) != std::string::npos) {
                                         complex_opened = false;
                                         break;

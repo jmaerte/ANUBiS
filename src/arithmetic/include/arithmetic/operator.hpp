@@ -19,7 +19,7 @@ namespace jmaerte {
  * NUM
  **********************************************************************************************************************/
 
-        extern double ELAPSED;
+        ARITHMETIC_EXPORT extern double ELAPSED;
 
         namespace num {
 

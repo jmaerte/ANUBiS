@@ -31,8 +31,17 @@ namespace jmaerte {
                     std::vector<vec::s_ap_int_vec> trivial;
                     std::vector<int> first;
                     int count = 0;
+
                     while (!matrix.is_empty()) {
                         vec::s_ap_int_vec vec = matrix.get();
+                        std::cout << "matrix valid" << std::endl;
+
+                        std::cout << vec->single << std::endl;
+
+                        for (int i = 0; i < vec::GET_OCC(vec); i++) {
+                            num::ap_int j = vec::AT(vec, i);
+                            std::cout << num::STRINGIFY(j) << std::endl;
+                        }
 
                         if (++count % 1000 == 0) std::cout << count << std::endl;
 //                        matrix = matrix.pop_front();

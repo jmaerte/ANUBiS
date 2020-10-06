@@ -92,6 +92,7 @@ namespace jmaerte {
                     (a + 1)->value = (ULL*) realloc(ABS(a), n * constants::BYTES_PER_ULL);
                     STRIP(ABS(a), n);
                     SET_OCC(a, n);
+                    return hi;
                 }
             }
         }

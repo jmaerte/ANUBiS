@@ -6,12 +6,16 @@
 #define ANUBIS_SUPERBUILD_STD_FACTORY_HPP
 
 #include "../operator.hpp"
+#include "Ivector_allocator.hpp"
 
 namespace jmaerte {
     namespace arith {
         namespace vec {
+            
             class ARITHMETIC_EXPORT std_factory : public vector_allocator {
             public:
+
+                std_factory();
 
                 // ALLOCATION
                 virtual s_ap_int_vec allocate_vec(std::size_t size) {

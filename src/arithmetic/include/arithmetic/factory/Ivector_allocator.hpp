@@ -6,13 +6,15 @@
 #define ANUBIS_SUPERBUILD_IVECTOR_ALLOCATOR_HPP
 
 #include "../typedef.hpp"
+#include "factory.hpp"
+#include <ARITHMETIC_EXPORT.h>
 #include <cstdlib>
 
 namespace jmaerte {
     namespace arith {
         namespace vec {
 
-            class vector_allocator {
+            class ARITHMETIC_EXPORT vector_allocator {
             public:
                 vector_allocator();
 

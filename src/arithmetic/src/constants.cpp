@@ -2,7 +2,7 @@
 // Created by jmaerte on 23.03.20.
 //
 
-#include "constants.hpp"
+#include "../include/arithmetic/constants.hpp"
 
 typedef unsigned long long ULL;
 

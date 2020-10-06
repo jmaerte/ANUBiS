@@ -87,9 +87,9 @@ namespace jmaerte {
     }
 }
 
-#include "aux/inl/auxiliary.inl"
-#include "aux/inl/divide.inl"
-#include "aux/inl/modular.inl"
-#include "aux/inl/multiply.inl"
+#include "misc/inl/auxiliary.inl"
+#include "misc/inl/divide.inl"
+#include "misc/inl/modular.inl"
+#include "misc/inl/multiply.inl"
 
 

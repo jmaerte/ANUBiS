@@ -5,7 +5,7 @@
 #ifndef ANUBIS_SUPERBUILD_HARDWARE_HPP
 #define ANUBIS_SUPERBUILD_HARDWARE_HPP
 
-#include "../../constants.hpp"
+#include "../../../include/arithmetic/constants.hpp"
 
 typedef unsigned long long ULL;
 

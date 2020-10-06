@@ -3,11 +3,13 @@ set(LIBRARY_TARGET_NAME ${PROJECT_NAME})
 set(${LIBRARY_TARGET_NAME}_SRC
 		src/complex.cpp
 		../data_struc/src/sparse.cpp
-		src/data_types/potence/potence.cpp)
+		src/data_types/potence/potence.cpp
+		src/probabibilistic/multi-parametric.cpp)
 
 set(${LIBRARY_TARGET_NAME}_PUBLIC_HDR
 		include/ANUBiS/complex.hpp
-		include/ANUBiS/complex/io.hpp)
+		include/ANUBiS/complex/io.hpp
+		include/ANUBiS/probabilistic/multi-parametric.hpp)
 
 set(${LIBRARY_TARGET_NAME}_PRIVATE_HDR
 		src/calc/computation.hpp

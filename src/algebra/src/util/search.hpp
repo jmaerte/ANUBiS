@@ -34,6 +34,19 @@ namespace jmaerte {
                 return a - b;
             }
 
+            int binary_search_ints(std::vector<int> arr, int t, int start, int end) {
+                if (end == 0 || arr[end - 1] < t) return end;
+                if (arr[start] > t) return 0;
+                int min = start;
+                int max = end;
+                while (min < max) {
+                    int mid = (min + max)/2;
+                    if (arr[mid] < t) min = mid + 1;
+                    else if (arr[mid] > t) max = mid;
+                    else return mid;
+                }
+                return min;
+            }
         }
     }
 }

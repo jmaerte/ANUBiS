@@ -44,7 +44,7 @@ namespace jmaerte {
                     try {
                         return factories.at(id);
                     } catch (const std::out_of_range& e) {
-                        jmaerte::output::LOGGER.err(output_channel_id,
+                        jmaerte::output::LOGGER.err(jmaerte::output::MEM_CHANNEL,
                                                      "Tried to access factory that is non-existent!",
                                                      jmaerte::output::LOGGER.INVALID_ARG);
 //                        std::cout << "[Mem] ERROR - Tried to access factory that is non-existent!" << std::endl;
@@ -56,13 +56,13 @@ namespace jmaerte {
                     for (unsigned int i = 0; i < max_factories; i++) {
                         if (factories.count(i) == 0) {
                             factories.insert({i, alloc});
-                            jmaerte::output::LOGGER.log(output_channel_id,
+                            jmaerte::output::LOGGER.log(jmaerte::output::MEM_CHANNEL,
                                                          "Factory of ID " + std::to_string(i) + " created.");
 //                            std::cout << "[Mem] Factory of ID " << i << " created." << std::endl;
                             return i;
                         }
                     }
-                    jmaerte::output::LOGGER.err(output_channel_id,
+                    jmaerte::output::LOGGER.err(jmaerte::output::MEM_CHANNEL,
                             "Factory reached maximum number " + std::to_string(max_factories) + " of allocators.",
                             jmaerte::output::LOGGER.BAD_ALLOC);
 //                    std::cout << "[Mem] Error - Factory reached maximum number " << max_factories << " of allocators." << std::endl;
@@ -75,17 +75,13 @@ namespace jmaerte {
                     factories.erase(id);
                 }
 
-                ~vector_factory() {
-                    jmaerte::output::LOGGER.release_channel(output_channel_id);
-                }
+                ~vector_factory() {}
 
             private:
                 std::map<unsigned int, vector_allocator*> factories;
                 unsigned int output_channel_id;
 
-                vector_factory(std::size_t max_factories): max_factories(max_factories) {
-                    output_channel_id = jmaerte::output::LOGGER.register_channel("MEM", std::cout);
-                }
+                vector_factory(std::size_t max_factories): max_factories(max_factories) {}
 
                 std::size_t max_factories;
             };

@@ -40,6 +40,10 @@ namespace jmaerte {
                     return ID;
                 }
 
+                unsigned int get_channel_id() {
+                    return channel_id;
+                }
+
             protected:
                 unsigned int channel_id;
             private:

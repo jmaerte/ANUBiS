@@ -7,6 +7,9 @@
 
 namespace jmaerte {
     namespace output {
+        const unsigned int MAIN_CHANNEL = 0u, MEM_CHANNEL = 1u, TIME_CHANNEL = 2u;
+
+
         logger& LOGGER = logger::get_instance();
 
 
@@ -16,7 +19,8 @@ namespace jmaerte {
                 id++;
             }
             channels.insert(std::pair(id, std::pair<std::string, std::ostream&>(name, stream)));
-            log(0u, "Registered output channel: " + name + ".");
+            log(0u, "Registered output channel: " + name + " on channel id " + std::to_string(id) + ".");
+            return id;
         }
 
         unsigned int logger::register_channel_group(std::string name, std::ostream& stream) {
@@ -25,6 +29,7 @@ namespace jmaerte {
             unmute();
             channel_groups.insert(std::make_pair(id, std::vector<unsigned int>{}));
             log(0u, "Registered output channel group: " + name + ".");
+            return id;
         }
 
         void logger::log(unsigned int id, std::string msg) {
@@ -51,7 +56,7 @@ namespace jmaerte {
 
         void logger::release_channel(unsigned int id) {
             channels.erase(id);
-            log(0u, "Released output channel: " + channels.at(id).first + ".");
+            log(0u, "Released output channel: " + std::to_string(id) + ".");
         }
 
         void logger::release_channel_group(unsigned int id) {

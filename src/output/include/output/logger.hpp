@@ -11,9 +11,15 @@
 #include <vector>
 #include <tuple>
 #include <OUTPUT_EXPORT.h>
+#include "../../src/util.hpp"
+
+#define PRIVATE __attribute__((visibility("hidden")))
+#define PUBLIC __attribute__((visibility("default")))
 
 namespace jmaerte {
     namespace output {
+
+        PUBLIC extern const OUTPUT_EXPORT unsigned int MAIN_CHANNEL, MEM_CHANNEL, TIME_CHANNEL;
 
         class logger;
 
@@ -81,9 +87,37 @@ namespace jmaerte {
             std::map<unsigned int, unsigned int> parents;
 
             logger() {
-                channels.insert(std::pair<unsigned int, std::pair<std::string, std::ostream&>>(0u, std::pair<std::string, std::ostream&>(std::string("Main"), std::cout)));
+                channels.insert(std::pair<unsigned int, std::pair<std::string, std::ostream&>>(MAIN_CHANNEL, std::pair<std::string, std::ostream&>(std::string("MAIN"), std::cout)));
+                channels.insert(std::pair<unsigned int, std::pair<std::string, std::ostream&>>(MEM_CHANNEL , std::pair<std::string, std::ostream&>(std::string("MEM"), std::cout)));
+                channels.insert(std::pair<unsigned int, std::pair<std::string, std::ostream&>>(TIME_CHANNEL, std::pair<std::string, std::ostream&>(std::string("TIME"), std::cout)));
+        }
+
+            ~logger() {
+                for (auto it = channels.begin(); it != channels.end(); it++) {
+                    if (it->first != 0) {
+                        log(0u, "Released output channel " + std::to_string(it->first) + ".");
+                    }
+                }
+                log(0u, "Releasing this channel (0) now.");
+                channels.clear();
             }
         };
+
+        /**
+         * Prints timings of a task with sub-tasks. The times should be given in microseconds.
+         */
+        static void print_time_resume(std::string task, double time, std::map<std::string, double> sub_tasks) {
+            std::pair<double, std::string> time_pair = cast_time(time);
+            std::string out = "\t+------------------------------------------------------------------------\r\n"
+                              "\t Time elapsed for " + task + ": " + std::to_string(time_pair.first) + time_pair.second + "\r\n";
+            for (auto it = sub_tasks.begin(); it != sub_tasks.end(); it++) {
+                time_pair = cast_time(it->second);
+                out += "\t\tFor " + it->first + ": " + std::to_string(time_pair.first) + time_pair.second + "\r\n";
+            }
+            out += "\t+------------------------------------------------------------------------";
+            LOGGER.log(TIME_CHANNEL, out);
+        }
+
     }
 }
 

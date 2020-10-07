@@ -373,6 +373,7 @@ namespace jmaerte {
                 }
 
                 static inline void RELEASE(unsigned int id) {
+                    jmaerte::output::LOGGER.release_channel(factory::dict.get_factory(id)->get_channel_id());
                     factory::dict.release_factory(id);
                     std::cout << "[Mem] Released factory " << id << " successfully!" << std::endl;
                 }

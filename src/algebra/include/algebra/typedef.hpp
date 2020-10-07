@@ -35,6 +35,10 @@ namespace jmaerte {
             unsigned int get_factory_id() {
                 return factory_id;
             }
+
+            unsigned int rows() {
+                return max;
+            }
         };
 
         typedef stream<vec::s_ap_float_vec> s_float_matrix;

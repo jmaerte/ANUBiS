@@ -31,7 +31,7 @@ int main() {
 //    auto c = jmaerte::anubis::s_tree::from_file(getenv("HOME") + slash + "Downloads" + slash + "c88");
 //
 //
-    auto c = jmaerte::anubis::s_list<false>::from_file(getenv("HOME") + slash + "Downloads" + slash + "c88");
+    auto c = jmaerte::anubis::s_list<false>::from_file(getenv("HOME") + slash + "Downloads" + slash + "c77");
 
     std::cout << "Dimension of " << c->get_name() << " is " << c->get_dim() << "." << std::endl;
 
@@ -53,7 +53,7 @@ int main() {
 //    for (auto i : c->f_vector()) {
 //        std::cout << i << std::endl;
 //    }
-    for (int i = 3; i < 4; i++) {
+    for (int i = 0; i < 7; i++) {
         std::cout << "CALCULATING HOMOLOGY OF DIMENSION " << i << "!" << std::endl;
         auto m = c->homology(i);
         if (i > 0) c->clear_dim(i - 1);
@@ -65,9 +65,10 @@ int main() {
         }
     }
     auto finish = std::chrono::high_resolution_clock::now();
-    std::cout << "Time elapsed: " << (finish - start).count() / 1e9 << "s" << std::endl;
+    jmaerte::output::print_time_resume("Homology of " + c->get_name(), std::chrono::duration_cast<std::chrono::microseconds>(finish - start).count(), {});
     delete c;
-    system("pause");
+    std::cout << "Press any key to exit...";
+    std::getchar();
     return 0;
 }
 

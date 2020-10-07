@@ -18,6 +18,107 @@ namespace jmaerte {
 
             using namespace jmaerte::arith;
 
+            void reduce(double& search_time, vec::s_ap_int_vec& vec, std::map<int, vec::s_ap_int_vec>& trivial,
+                    std::vector<vec::s_ap_int_vec>& remainder, std::vector<int>& first_remainder,
+                    unsigned int& remainder_factory_id) {
+                int pos = num::GET_POS(vec::AT(vec, 0));
+                auto time = std::chrono::steady_clock::now();
+//                        int k = util::binary_search_ints(first, pos, 0, first.size());
+                auto it = trivial.find(pos);
+                search_time += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - time).count();
+
+//                        while (k < first.size() && first[k] == pos) {
+                while (it != trivial.end()) {
+//                            vec::REDUCE(vec, trivial[k], 0);
+                    vec::REDUCE(vec, it->second, 0);
+
+                    if (vec::GET_OCC(vec) == 0) {
+                        break;
+                    }
+                    pos = num::GET_POS(vec::AT(vec, 0));
+                    time = std::chrono::steady_clock::now();
+//                            k = util::binary_search_ints(first, pos, k, first.size());
+                    it = trivial.find(pos);
+                    search_time += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - time).count();
+                }
+
+                if (vec::GET_OCC(vec) == 0) {
+                    vec::DELETE(vec);
+                } else if (num::IS_SINGLE(vec::AT(vec, 0)) && (vec::AT(vec, 0) + 1)->single == 1ULL) {
+                    // assert that the leading entry is -1.
+                    if (!num::GET_SIGN(vec::AT(vec, 0))) vec::SWITCH_SIGNS(vec);
+                    pos = num::GET_POS(vec::AT(vec, 0));
+
+                    // REDUCED ROW ECHELON FORM
+//                            for (vec::s_ap_int_vec& v : trivial) {
+//
+//                                int j = vec::FIND_POS(v, pos);
+//                                if (j < vec::GET_OCC(v) && num::GET_POS(vec::AT(v, j)) == pos) {
+//                                    vec::REDUCE(v, vec, j);
+//                                }
+//                            }
+//
+//                            k = util::binary_search(first, pos, 0, first.size(), util::compare_ints);
+
+//                            trivial.insert(trivial.begin() + k, vec);
+//                            first.insert(first.begin() + k, pos);
+                    trivial[pos] = vec;
+
+                    // this can be done multi-threaded
+                    for (int l = 0; l < remainder.size(); l++) {
+                        auto& v = remainder[l];
+//                                if (v == nullptr) continue;
+                        int j = vec::FIND_POS(v, pos);
+                        if (j < vec::GET_OCC(v) && num::GET_POS(vec::AT(v, j)) == pos) {
+
+                            std::cout << "REMAINDER: FIRST: " << first_remainder[l] << " : ";
+
+                            for (int i = 0; i < vec::GET_OCC(v); i++) {
+                                std::cout << num::GET_POS(vec::AT(v, i)) << " " << num::STRINGIFY(vec::AT(v, i)) << " ; ";
+                            }
+                            std::cout << std::endl;
+
+                            vec::REDUCE(v, vec, j);
+
+                            if (j == 0) {
+                                std::cout << "l : " << l << std::endl;
+                                std::cout << "remainder.size : " << remainder.size() << std::endl;
+                                remainder.erase(remainder.begin() + l);
+                                first_remainder.erase(first_remainder.begin() + l);
+                                for (int i = 0; i < vec::GET_OCC(v); i++) {
+                                    std::cout << num::GET_POS(vec::AT(v, i)) << " " << num::STRINGIFY(vec::AT(v, i)) << " ; ";
+                                }
+                                std::cout << std::endl;
+
+                                if (vec::GET_OCC(v) == 0) {
+                                    std::cout << "deleting v" << std::endl;
+                                    vec::DELETE(v);
+                                    std::cout << "deleted v" << std::endl;
+                                } else {
+                                    reduce(search_time, v, trivial, remainder, first_remainder, remainder_factory_id);
+                                    std::cout << "after reduction : ";
+                                    for (int i = 0; i < vec::GET_OCC(v); i++) {
+                                        std::cout << num::GET_POS(vec::AT(v, i)) << " " << num::STRINGIFY(vec::AT(v, i)) << " ; ";
+                                    }
+                                    std::cout << std::endl;
+                                }
+
+                                if (l == remainder.size() || remainder[l] != v) l--;
+                                std::cout << "l = " << l << std::endl;
+                                std::cout << "remainder.size = " << remainder.size() << std::endl;
+                            }
+                        }
+                    }
+                } else {
+//                            pos = num::GET_POS(vec::AT(vec, 0));
+                    int k = util::binary_search(first_remainder, pos, 0, first_remainder.size(), util::compare_ints);
+                    remainder.insert(remainder.begin() + k, vec::COPY(remainder_factory_id, vec));
+                    vec::DELETE(vec);
+                    first_remainder.insert(first_remainder.begin() + k, pos);
+                }
+            }
+
+
 //            template<typename Allocator = std::allocator<jmaerte::arith::svec_node>>
             std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> smith(s_int_matrix matrix) {
 
@@ -77,108 +178,8 @@ namespace jmaerte {
 //                        }
 
                         // NON REDUCED ROW ECHELON
-                        int pos = num::GET_POS(vec::AT(vec, 0));
-                        time = std::chrono::steady_clock::now();
-//                        int k = util::binary_search_ints(first, pos, 0, first.size());
-                        auto it = trivial.find(pos);
-                        search_time += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - time).count();
+                        reduce(search_time, vec, trivial, remainder, first_remainder, remainder_factory_id);
 
-//                        while (k < first.size() && first[k] == pos) {
-                        while (it != trivial.end()) {
-//                            vec::REDUCE(vec, trivial[k], 0);
-                            vec::REDUCE(vec, it->second, 0);
-
-                            if (vec::GET_OCC(vec) == 0) {
-                                break;
-                            }
-                            pos = num::GET_POS(vec::AT(vec, 0));
-                            time = std::chrono::steady_clock::now();
-//                            k = util::binary_search_ints(first, pos, k, first.size());
-                            it = trivial.find(pos);
-                            search_time += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - time).count();
-                        }
-
-                        if (vec::GET_OCC(vec) == 0) {
-                            vec::DELETE(vec);
-                        } else if (num::IS_SINGLE(vec::AT(vec, 0)) && (vec::AT(vec, 0) + 1)->single == 1ULL) {
-                            // assert that the leading entry is -1.
-                            if (!num::GET_SIGN(vec::AT(vec, 0))) vec::SWITCH_SIGNS(vec);
-//                            pos = num::GET_POS(vec::AT(vec, 0));
-
-                            // REDUCED ROW ECHELON FORM
-//                            for (vec::s_ap_int_vec& v : trivial) {
-//
-//                                int j = vec::FIND_POS(v, pos);
-//                                if (j < vec::GET_OCC(v) && num::GET_POS(vec::AT(v, j)) == pos) {
-//                                    vec::REDUCE(v, vec, j);
-//                                }
-//                            }
-//
-//                            k = util::binary_search(first, pos, 0, first.size(), util::compare_ints);
-
-//                            trivial.insert(trivial.begin() + k, vec);
-//                            first.insert(first.begin() + k, pos);
-                            trivial[pos] = vec;
-
-                            // this can be done multi-threaded
-                            for (int l = 0; l < remainder.size(); l++) {
-                                auto& v = remainder[l];
-//                                if (v == nullptr) continue;
-                                int j = vec::FIND_POS(v, pos);
-                                if (j < vec::GET_OCC(v) && num::GET_POS(vec::AT(v, j)) == pos) {
-
-                                    vec::REDUCE(v, vec, j);
-
-                                    if (j == 0) {
-                                        if (vec::GET_OCC(v) == 0) {
-                                            vec::DELETE(v);
-                                            remainder.erase(remainder.begin() + l);
-                                            first_remainder.erase(first_remainder.begin() + l);
-                                            l--;
-                                        }
-                                        it = trivial.find(num::GET_POS(vec::AT(v, 0)));
-                                        while (it != trivial.end()) {
-//                                            std::cout << num::GET_POS(vec::AT(v, 0)) << std::endl;
-
-                                            vec::REDUCE(v, it->second, 0);
-
-//                                            std::cout << num::GET_POS(vec::AT(v, 0)) << std::endl;
-
-                                            if (vec::GET_OCC(v) == 0) {
-                                                break;
-                                            }
-                                            it = trivial.find(num::GET_POS(vec::AT(v, 0)));
-                                        }
-                                        if (vec::GET_OCC(v) == 0) {
-                                            vec::DELETE(v);
-                                            remainder.erase(remainder.begin() + l);
-                                            first_remainder.erase(first_remainder.begin() + l);
-                                            l--;
-                                        } else if (num::IS_SINGLE(vec::AT(v, 0)) && (vec::AT(v, 0) + 1)->single == 1ULL) {
-                                            remainder.erase(remainder.begin() + l);
-                                            first_remainder.erase(first_remainder.begin() + l);
-                                            if (!num::GET_SIGN(vec::AT(v, 0))) vec::SWITCH_SIGNS(v);
-                                            trivial[num::GET_POS(vec::AT(v, 0))] = v;
-                                            l--;
-                                        } else {
-                                            pos = num::GET_POS(vec::AT(v, 0));
-                                            remainder.erase(remainder.begin() + l);
-                                            first_remainder.erase(first_remainder.begin() + l);
-                                            int k = util::binary_search(first_remainder, pos, 0, first_remainder.size(), util::compare_ints);
-                                            first_remainder.insert(first_remainder.begin() + k, pos);
-                                            remainder.insert(remainder.begin() + k, v);
-                                            if (k != l) l--;
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-//                            pos = num::GET_POS(vec::AT(vec, 0));
-                            int k = util::binary_search(first_remainder, pos, 0, first_remainder.size(), util::compare_ints);
-                            remainder.insert(remainder.begin() + k, vec::COPY(remainder_factory_id, vec));
-                            vec::DELETE(vec);
-                            first_remainder.insert(first_remainder.begin() + k, pos);
-                        }
                     }
                     result.emplace(num::NEW(1, false, 1ULL), trivial.size());
 

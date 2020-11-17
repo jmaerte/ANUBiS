@@ -165,6 +165,10 @@ public:
 
     std::size_t count_jobs();
 
+    std::size_t kernels() {
+        return workers.size();
+    }
+
 private:
 
     typedef std::function<void()> task;

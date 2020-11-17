@@ -45,10 +45,13 @@ namespace jmaerte {
             switch(err_id) {
                 case INVALID_ARG:
                     channels.at(id).second << "INVALID ARGUMENT - ";
+                    break;
                 case BAD_ALLOC:
                     channels.at(id).second << "BAD ALLOC - ";
+                    break;
                 default:
                     channels.at(id).second << "ERROR - ";
+                    break;
             }
             channels.at(id).second << msg << std::endl;
             throw;

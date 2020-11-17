@@ -159,6 +159,10 @@ namespace jmaerte {
                  * @returns if dest is now multi.
                  */
                 bool iC_MUL(ap_int coeff, ap_int a, ap_int* dest) {
+//                    std::cout << "iC_MUL" << std::endl;
+//                    std::cout << num::GET_SIGN(coeff) << " " << num::GET_SIZE(coeff) << " " << num::GET_OCC(coeff) << " " << num::GET_POS(coeff) << " " << num::STRINGIFY(coeff) << std::endl;
+//                    std::cout << num::GET_SIGN(a) << " " << num::GET_SIZE(a) << " " << num::GET_OCC(a) << " " << num::GET_POS(a) << " " << num::STRINGIFY(a) << std::endl;
+
                     bool multi = false;
                     ULL sign = (GET_SIGN(coeff) ^ GET_SIGN(a)) ? 1ULL : 0ULL;
                     ULL lambda = (coeff + 1)->single;
@@ -191,10 +195,16 @@ namespace jmaerte {
                         } else SET_OCC(*dest, n);
                         multi = true;
                     }
+//                    std::cout << num::GET_SIGN(*dest) << " " << num::GET_SIZE(*dest) << " " << num::GET_OCC(*dest) << " " << num::GET_POS(*dest) << " " << num::STRINGIFY(*dest) << std::endl;
                     return multi;
                 }
 
                 bool iC_A_MUL(ap_int coeff, ap_int a, ap_int* dest) {
+//                    std::cout << "iC_A_MUL" << std::endl;
+//                    std::cout << num::IS_SINGLE(coeff) << " " << num::GET_SIGN(coeff) << " " << num::GET_SIZE(coeff) << " " << num::GET_OCC(coeff) << " " << num::GET_POS(coeff) << " " << num::STRINGIFY(coeff) << std::endl;
+//                    std::cout << num::IS_SINGLE(a) << " " << num::GET_SIGN(a) << " " << num::GET_SIZE(a) << " " << num::GET_OCC(a) << " " << num::GET_POS(a) << " " << num::STRINGIFY(a) << std::endl;
+//                    std::cout << num::IS_SINGLE(*dest) << " " << num::GET_SIGN(*dest) << " " << num::GET_SIZE(*dest) << " " << num::GET_OCC(*dest) << " " << num::GET_POS(*dest) << " " << num::STRINGIFY(*dest) << std::endl;
+
                     bool multi = false;
                     ULL sign = (GET_SIGN(coeff) ^ GET_SIGN(a)) ? 1ULL : 0ULL;
                     ULL lambda = (coeff + 1)->single;
@@ -262,7 +272,10 @@ namespace jmaerte {
                                     if ((*dest + 1)->single < prod) {
                                         SWITCH_SIGN(*dest);
                                         (*dest + 1)->single = prod - (*dest + 1)->single;
-                                    } else (*dest + 1)->single -= prod;
+                                    } else if ((*dest + 1)->single > prod) (*dest + 1)->single -= prod;
+                                    else {
+                                        *dest = num::NEW(false, 0ULL);
+                                    }
                                 }
                             } else {
                                 multi = true;
@@ -312,12 +325,13 @@ namespace jmaerte {
                             } else {
                                 SUB(*dest, lambda, 0, a);
                                 if (GET_OCC(*dest) == 1) {
-                                    multi = true;
+                                    multi = false;
                                     MAKE_SINGLE(*dest);
                                 }
                             }
                         }
                     }
+//                    std::cout << num::IS_SINGLE(*dest) << " " << num::GET_SIGN(*dest) << " " << num::GET_SIZE(*dest) << " " << num::GET_OCC(*dest) << " " << num::GET_POS(*dest) << " " << num::STRINGIFY(*dest) << std::endl;
                     return multi;
                 }
 
@@ -396,7 +410,7 @@ namespace jmaerte {
                 }
 
                 int COMPARE_RAW(ULL* a, ULL* b, int length) {
-                    ULL* stop = a - length - 1;
+                    ULL* stop = a - length;
                     for (; a != stop; ) {
                         if (*--a != *--b) return *a > *b ? 1 : -1;
                     }

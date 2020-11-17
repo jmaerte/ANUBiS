@@ -57,12 +57,12 @@ namespace jmaerte {
                 return n->single & num::SINGLE_MASK;
             }
 
-            static inline int GET_POS(ap_int const n) {
+            static inline unsigned int GET_POS(ap_int const n) {
                 return IS_SINGLE(n) ? (n->single >> 2) : (n->single >> 32);
             }
 
-            static inline int GET_OCC(ap_int const n) {
-                return (n->single & constants::L_MASK) >> 17;
+            static inline unsigned int GET_OCC(ap_int const n) {
+                return IS_SINGLE(n) ? 1 : (n->single & constants::L_MASK) >> 17;
             }
 
             static inline ULL* ABS(ap_int const n) {
@@ -77,8 +77,8 @@ namespace jmaerte {
                 return a == nullptr;
             }
 
-            static inline int GET_SIZE(ap_int const n) {
-                return (n->single & num::SIZE_MASK) >> 2;
+            static inline unsigned int GET_SIZE(ap_int const n) {
+                return IS_SINGLE(n) ? 1 : (n->single & num::SIZE_MASK) >> 2;
             }
 
             static inline void SET_POS(ap_int n, int pos) {
@@ -347,8 +347,14 @@ namespace jmaerte {
 
             static inline void SWAP_VALUES(s_ap_int_vec v, int i, int j) {
                 ULL temp = AT(v, i)->single;
-                AT(v, i)->single = AT(v, j)->single & ~num::POS_MASK | temp & num::POS_MASK;
-                AT(v, j)->single = temp & ~num::POS_MASK | AT(v, j)->single & num::POS_MASK;
+                int i_pos = num::GET_POS(AT(v, i));
+                int j_pos = num::GET_POS(AT(v, j));
+
+                AT(v, i)->single = AT(v, j)->single;
+                AT(v, j)->single = temp;
+
+                num::SET_POS(AT(v, i), i_pos);
+                num::SET_POS(AT(v, j), j_pos);
                 // swap data pointers
                 auto a = AT(v, i) + 1;
                 *(AT(v, i) + 1) = *(AT(v, j) + 1);
@@ -367,7 +373,7 @@ namespace jmaerte {
 
                 template<typename factory_type>
                 static inline unsigned int REGISTER() {
-                    std::cout << "[Mem] Registering factory of type " << typeid(factory_type).name() << "." << std::endl;
+                    output::LOGGER.log(output::MEM_CHANNEL, "Registering factory of type " + std::string(typeid(factory_type).name()) + ".");
                     auto fact = new factory_type();
                     return fact->get_id();
                 }
@@ -375,7 +381,7 @@ namespace jmaerte {
                 static inline void RELEASE(unsigned int id) {
                     jmaerte::output::LOGGER.release_channel(factory::dict.get_factory(id)->get_channel_id());
                     factory::dict.release_factory(id);
-                    std::cout << "[Mem] Released factory " << id << " successfully!" << std::endl;
+                    output::LOGGER.log(output::MEM_CHANNEL, "Released factory " + std::to_string(id) + " successfully!");
                 }
             }
 
@@ -396,7 +402,7 @@ namespace jmaerte {
             }
 
             static inline void DELETE(s_ap_int_vec& v) {
-                factory::dict.get_factory(v)->deallocate_vec(v);
+                factory::dict.get_factory(GET_FACTORY_ID(v))->deallocate_vec(v);
             }
 
             static inline void DELETE_POS(s_ap_int_vec v, int i) {
@@ -414,13 +420,18 @@ namespace jmaerte {
                     if (GET_IS_ALL_SINGLE(a)) {
                         ADD_ALL_SINGLE(a, k + 1, AT(a, k), b, 1);
                     } else {
-                        ADD_SINGLE(a, k + 1, AT(a, k), b, 1);
+                        std::cout << "not trivial anymore" << std::endl;
+//                        ADD_SINGLE(a, k + 1, AT(a, k), b, 1);
+                        ADD(a, k + 1, AT(a, k), b, 1);
                     }
                 } else {
                     if(GET_IS_ALL_SINGLE(a)) {
+                        std::cout << "not trivial anymore" << std::endl;
                         a->single &= ~vec::ALL_SINGLE_MASK; // there exists multi
-                        ADD_SINGLE_SCALAR(a, k + 1, AT(a, k), b, 1);
+//                        ADD_SINGLE_SCALAR(a, k + 1, AT(a, k), b, 1);
+                        ADD(a, k + 1, AT(a, k), b, 1);
                     } else {
+                        std::cout << "not trivial anymore" << std::endl;
                         ADD(a, k + 1, AT(a, k), b, 1);
                     }
                 }

@@ -42,7 +42,6 @@ namespace jmaerte {
                     }
                     if (alloc == nullptr || (1 + 2 * size) + (alloc - blocks[page]) > block_size) {
                         jmaerte::output::LOGGER.log(channel_id, "Allocating memory block.");
-                        std::cout << "logged" << std::endl;
                         if (page == blocks.size() - 1) {
                             blocks.push_back(static_cast<svec_node*>(malloc(type_size * block_size)));
                             if (blocks.back() == nullptr || blocks.back() == NULL) {

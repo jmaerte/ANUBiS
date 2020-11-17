@@ -3,12 +3,16 @@
 //
 
 #include "../include/arithmetic/constants.hpp"
+#include "arithmetic/factory/factory.hpp"
+#include "arithmetic/operator.hpp"
 
 typedef unsigned long long ULL;
 
 namespace jmaerte {
     namespace arith {
         namespace constants {
+            unsigned int HEAP_FACTORY_ID = vec::factory::REGISTER<jmaerte::arith::vec::std_factory>();
+
             const int BYTES_PER_ULL = sizeof(ULL);
             const int ULL_SIZE = 8 * BYTES_PER_ULL;
             const ULL L_MASK = (1ULL << (ULL_SIZE / 2)) - 1;
@@ -21,11 +25,14 @@ namespace jmaerte {
         }
 
         namespace num {
-            const ULL SIGN_MASK = 1ULL << 1;
-            const ULL SINGLE_MASK = 1ULL;
-            const ULL POS_MASK = constants::H_MASK;
-            const ULL SIZE_MASK = constants::FIFTEEN << 2;
-            const ULL OCC_MASK = constants::FIFTEEN << 17;
+
+            // CONSTANTS FOR MULTI NUMBERS
+
+            const ULL SIGN_MASK = 1ULL << 1; // 0....010
+            const ULL SINGLE_MASK = 1ULL; // 0....01
+            const ULL POS_MASK = constants::H_MASK; // 1....10....0
+            const ULL SIZE_MASK = constants::FIFTEEN << 2; // 0....01....100
+            const ULL OCC_MASK = constants::FIFTEEN << 17; // 0...01...10...0
 
             const ULL MASKS[] = {
                     constants::H_MASK, constants::L_MASK

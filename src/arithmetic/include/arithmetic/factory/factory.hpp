@@ -11,6 +11,8 @@
 #include <stdexcept>
 #include <string>
 #include <iostream>
+#include <exception>
+#include "arithmetic/constants.hpp"
 
 namespace jmaerte {
     namespace arith {
@@ -45,7 +47,7 @@ namespace jmaerte {
                         return factories.at(id);
                     } catch (const std::out_of_range& e) {
                         jmaerte::output::LOGGER.err(jmaerte::output::MEM_CHANNEL,
-                                                     "Tried to access factory that is non-existent!",
+                                                     "Tried to access factory " + std::to_string(id) + " that is non-existent!",
                                                      jmaerte::output::LOGGER.INVALID_ARG);
 //                        std::cout << "[Mem] ERROR - Tried to access factory that is non-existent!" << std::endl;
                         throw e;
@@ -58,6 +60,8 @@ namespace jmaerte {
                             factories.insert({i, alloc});
                             jmaerte::output::LOGGER.log(jmaerte::output::MEM_CHANNEL,
                                                          "Factory of ID " + std::to_string(i) + " created.");
+                            jmaerte::output::LOGGER.log(jmaerte::output::MEM_CHANNEL,
+                                                            "Current ");
 //                            std::cout << "[Mem] Factory of ID " << i << " created." << std::endl;
                             return i;
                         }
@@ -65,6 +69,7 @@ namespace jmaerte {
                     jmaerte::output::LOGGER.err(jmaerte::output::MEM_CHANNEL,
                             "Factory reached maximum number " + std::to_string(max_factories) + " of allocators.",
                             jmaerte::output::LOGGER.BAD_ALLOC);
+                    throw std::runtime_error("");
 //                    std::cout << "[Mem] Error - Factory reached maximum number " << max_factories << " of allocators." << std::endl;
 //                    throw std::overflow_error{"[Mem] Error - Factory reached maximum number " + std::to_string(max_factories) + " of allocators."};
                 }
@@ -75,7 +80,15 @@ namespace jmaerte {
                     factories.erase(id);
                 }
 
-                ~vector_factory() {}
+                ~vector_factory() {
+                    for (unsigned int i = 0; i < max_factories; i++) {
+                        auto it = factories.find(i);
+                        if (it != factories.end()) {
+                            delete it->second;
+                            factories.erase(it);
+                        }
+                    }
+                }
 
             private:
                 std::map<unsigned int, vector_allocator*> factories;

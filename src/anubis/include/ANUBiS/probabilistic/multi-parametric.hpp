@@ -15,12 +15,12 @@ namespace jmaerte {
             class ANUBIS_EXPORT mp_experiment {
             public:
             struct node {
-                complex* m_complex;
                 double prob;
                 bool is_P;
                 std::vector<node*> children;
                 node* parent;
             };
+
             private:
 
                 int depth = -1;
@@ -34,7 +34,7 @@ namespace jmaerte {
 
                 mp_experiment(std::function<bool(complex*)> P, std::function<double(int)> p, int n): P(P), p(p), n(n) {};
 
-                void generate_poset();
+                double generate_poset();
                 void render_poset();
             };
 

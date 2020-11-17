@@ -25,23 +25,23 @@ namespace jmaerte {
     namespace anubis {
         namespace probabilistic {
 
-            void proceed(mp_experiment* exp, mp_experiment::node * node, potence<int> * pot) {
+            void proceed(mp_experiment* exp, mp_experiment::node * node, potence<int> * pot, complex* cmplx) {
                 while (!pot->done()) {
                     int * simplex = new int[pot->order()];
                     for (int i = 0; i < pot->order(); i++) simplex[i] = pot->get(i);
 
-                    if (node->m_complex->is_external(simplex)) {
+                    if (cmplx->is_external(simplex)) {
                         mp_experiment::node * next = new mp_experiment::node;
                         node->children.push_back(next);
-                        next->m_complex = node->m_complex->im_insert(simplex);
+//                        next->m_complex = cmplx->im_insert(simplex);
+                        auto c = cmplx->im_insert(simplex);
                         next->parent = node;
                         next->prob = exp->p(pot->order() - 1) * node->prob;
-                        next->is_P = exp->P(next->m_complex);
+                        next->is_P = exp->P(c);
 
                         potence<int>* pt = pot->copy();
                         delete simplex;
-
-                        proceed(exp, next, pt);
+                        proceed(exp, next, pt, c);
                     } else {
                         node->prob *= exp->p(pot->order() - 1);
                         pot->operator++();
@@ -50,21 +50,22 @@ namespace jmaerte {
                 }
             }
 
-            void mp_experiment::generate_poset() {
+            double mp_experiment::generate_poset() {
                 if (!root) {
-                    return;
+                    return 0;
                 }
 
                 root = new mp_experiment::node;
-                root->m_complex = s_list<true>::from_facets({}, "complex", -1);
+//                root->m_complex = s_list<true>::from_facets({}, "complex", -1);
+                auto c = s_list<true>::from_facets({}, "complex", -1);
                 root->prob = 1.0;
-                root->is_P = P(root->m_complex);
+                root->is_P = P(c);
                 root->parent = nullptr;
 
                 std::vector<int> vertices (n);
                 std::iota(vertices.begin(), vertices.end(), 1);
 
-                proceed(this, root, new potence<int>(vertices, 1));
+                proceed(this, root, new potence<int>(vertices, 1), c);
             }
 
 

@@ -90,7 +90,7 @@ namespace jmaerte {
                 channels.insert(std::pair<unsigned int, std::pair<std::string, std::ostream&>>(MAIN_CHANNEL, std::pair<std::string, std::ostream&>(std::string("MAIN"), std::cout)));
                 channels.insert(std::pair<unsigned int, std::pair<std::string, std::ostream&>>(MEM_CHANNEL , std::pair<std::string, std::ostream&>(std::string("MEM"), std::cout)));
                 channels.insert(std::pair<unsigned int, std::pair<std::string, std::ostream&>>(TIME_CHANNEL, std::pair<std::string, std::ostream&>(std::string("TIME"), std::cout)));
-        }
+            }
 
             ~logger() {
                 for (auto it = channels.begin(); it != channels.end(); it++) {

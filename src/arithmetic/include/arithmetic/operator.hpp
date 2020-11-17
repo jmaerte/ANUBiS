@@ -19,6 +19,7 @@ namespace jmaerte {
  * NUM
  **********************************************************************************************************************/
 
+        ARITHMETIC_EXPORT extern bool PRINT;
         ARITHMETIC_EXPORT extern double ELAPSED;
 
         namespace num {
@@ -26,13 +27,13 @@ namespace jmaerte {
             // INLINE
             static std::string STRINGIFY(ap_int const n);
 
-            static int   GET_POS(ap_int const n);
-            static int   GET_OCC(ap_int const n);
+            static unsigned int   GET_POS(ap_int const n);
+            static unsigned int   GET_OCC(ap_int const n);
             static ULL*  ABS(ap_int const n);
             static bool  GET_SIGN(ap_int const n);
             static bool  IS_NA(ap_int a);
             static bool  IS_SINGLE(ap_int const n);
-            static int   GET_SIZE(ap_int const n);
+            static unsigned int   GET_SIZE(ap_int const n);
 
             static void  SET_POS(ap_int n, int pos);
             static void  SET_SIZE(ap_int n, int size);
@@ -62,6 +63,8 @@ namespace jmaerte {
 
             // NOT INLINE
             ARITHMETIC_EXPORT int COMPARE_ABS(ap_int const n_a, ap_int const n_b);
+            ARITHMETIC_EXPORT bool COMPARE(ap_int const a, ap_int const b);
+            ARITHMETIC_EXPORT bool IS_ZERO(ap_int const a);
 
         }
 

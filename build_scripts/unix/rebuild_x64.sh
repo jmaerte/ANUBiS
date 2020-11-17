@@ -5,6 +5,6 @@ echo Starting Build Process...
 # sudo rm -rf build
 mkdir build
 cd build
-cmake .. -DARCHITECTURE=64 -DCMAKE_BUILD_TYPE=Release -DBOOST_PATH=/media/jmaerte/DATA2/boost/lib
+cmake .. -DCMAKE_BUILD_TYPE=Debug -DARCHITECTURE=64 -DCMAKE_BUILD_TYPE=Release
 make
 cd ..

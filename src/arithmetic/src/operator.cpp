@@ -11,6 +11,7 @@ namespace jmaerte {
     namespace arith {
 
         double ELAPSED = 0.0;
+        bool PRINT = false;
 
         namespace num {
             /*
@@ -20,8 +21,8 @@ namespace jmaerte {
             int COMPARE_ABS(ap_int const n_a, ap_int const n_b) {
                 if (num::IS_SINGLE(n_a)) {
                     if (num::IS_SINGLE(n_b)) {
-                        if ((n_a+1)->value != (n_b+1)->value) {
-                            return (n_a+1)->value > (n_b+1)->value ? 1 : -1;
+                        if ((n_a+1)->single != (n_b+1)->single) {
+                            return (n_a+1)->single > (n_b+1)->single ? 1 : -1;
                         }
                         return 0;
                     } else return -1;
@@ -37,9 +38,27 @@ namespace jmaerte {
                 }
             }
 
+            // returns true if a < b; i.e. if a and b are in the right order.
+            bool COMPARE(ap_int const a, ap_int const b) {
+                if ((a->single ^ b->single) & num::SIGN_MASK) return GET_SIGN(a);
+                int cp = COMPARE_ABS(a, b);
+                if (cp == 0) return false;
+                return (cp < 0) ^ GET_SIGN(a);
+            }
+
+            bool IS_ZERO(ap_int const a) {
+                if (num::IS_SINGLE(a)) return (a+1)->single == 0ULL;
+                else {
+                    for (int i = 0; i < num::GET_OCC(a); i++) {
+                        if (*((a+1)->value + i) != 0) return false;
+                    }
+                    return true;
+                }
+            }
+
+
             bool comp::SIGNED_COMPARATOR::operator()(ap_int const &a, ap_int const &b) const {
-                if ((a->single ^ b->single) & num::SIGN_MASK) return GET_SIGN(a) ? b : a;
-                return !((COMPARE_ABS(a, b) < 0) ^ GET_SIGN(a));
+                COMPARE(a, b);
             }
 
             bool comp::UNSIGNED_COMPARATOR::operator()(ap_int const &a, ap_int const &b) const {
@@ -236,7 +255,7 @@ namespace jmaerte {
                     ENLARGE(v);
                 }
                 if (k < GET_OCC(v)) {
-                    std::copy_backward(AT(v, k), AT(v, GET_OCC(v)), AT(v, GET_OCC(v) + 2));
+                    std::copy_backward(AT(v, k), AT(v, GET_OCC(v)), AT(v, GET_OCC(v) + 1));
                 }
                 SET(v, k, n);
                 SET_OCC(v, GET_OCC(v) + 1);
@@ -346,6 +365,14 @@ namespace jmaerte {
                     }
                 }
 
+                if(PRINT) {
+                    std::cout << "End for" << std::endl;
+                    std::cout << a << " " << (a + GET_SIZE(a) * 2 + 1) << std::endl;
+                    std::cout << a_cpy << " " << (a_cpy + 2 * size_cpy) << std::endl;
+                    std::cout << b << " " << (b + GET_SIZE(b) * 2 + 1) << std::endl;
+                }
+
+
                 while(i < size_cpy) {
 //                    std::cout << "cpy - it: " << it << std::endl;
 //                    std::cout << "it_cpy: " << it_cpy << std::endl;
@@ -370,7 +397,7 @@ namespace jmaerte {
                     a[1 + 2 * occ] = (svec_node){.single = 1ULL | (num::GET_SIGN(b + 1 + 2 * j) ^ lambda_sign ? 1ULL : 0ULL) << 1 | pos_b << 2};
                     a[2 + 2 * occ] = (svec_node){.single = mul((b + 2 + 2 * j)->single, lambda, &overflow)};
                     if (overflow) {
-                        num::MAKE_MULTI(it, overflow);
+                        num::MAKE_MULTI(AT(a, occ), overflow);
                         multi = true;
                     }
                     j++;
@@ -386,7 +413,7 @@ namespace jmaerte {
             }
 
             /**
-             * Addition function exclusively for b being a vector where every entry is a single.
+             * Addition function exclusively for b being a vector where every entry is a single and lambda being a single scalar.
              * @param a
              * @param start_a
              * @param lambda_num
@@ -394,59 +421,179 @@ namespace jmaerte {
              * @param start_b
              */
             void ADD_SINGLE(s_ap_int_vec& a, int start_a, num::ap_int lambda, s_ap_int_vec b, int start_b) {
-                num::ap_int a_end = AT(a, GET_OCC(a));
-                num::ap_int b_end = AT(b, GET_OCC(b));
+                int occ = GET_OCC(a);
+                int occ_b = GET_OCC(b);
 
-                num::ap_int it_a = AT(a, start_a);
-                num::ap_int j = AT(b, start_b);
+                num::ap_int it = AT(a, start_a);
+
+                int size_cpy = (occ - start_a);
+
+                svec_node* a_cpy = static_cast<svec_node*>(malloc(2 * size_cpy * sizeof(svec_node)));
+
+                memcpy(static_cast<void*>(a_cpy), static_cast<void*>(a + 1 + 2 * start_a), 2 * size_cpy * sizeof(svec_node));
+
+                SET_OCC(a, start_a);
+                occ = start_a;
+
+                lambda = num::COPY(lambda);
 
                 ULL pos_a, pos_b;
-                ULL occ = GET_OCC(a);
-                for (int i = start_a; i < occ && j != b_end;) {
-                    if ((pos_a = num::GET_POS(it_a)) < (pos_b = j->single >> 2)) {
+                int i = 0, j = start_b;
+                ULL overflow;
+
+                for (; i < size_cpy && j != occ_b; occ++) {
+//                    std::cout << "it: " << it << std::endl;
+//                    std::cout << "it_cpy: " << it_cpy << std::endl;
+                    if (occ >= GET_SIZE(a)) {
+                        ENLARGE_RANGE(a, occ);
+                        it = AT(a, occ);
+//                        std::cout << "a is now " << a << " and it is " << it << std::endl;
+                    }
+//                    std::cout << i << " " << (b_end - j) / 2 << std::endl;
+                    if ((pos_a = num::GET_POS(a_cpy + 2 * i)) < (pos_b = num::GET_POS(b + 1 + 2 * j))) {
+                        a[1 + 2 * occ] = a_cpy[2 * i];
+                        a[2 + 2 * occ] = a_cpy[2 * i + 1];
                         i++;
-                        it_a += 2;
                     } else if (pos_a > pos_b) {
-                        if (occ + 1 > GET_SIZE(a)) {
-                            ENLARGE(a);
-                            it_a = AT(a, i);
-                            a_end = AT(a, occ);
-                        }
-                        // copy j and j + 1 into a.
-                        std::copy_backward(it_a, a_end, a_end + 2);
-                        num::aux::iC_MUL(j, lambda, &it_a);
-                        num::SET_POS(it_a, pos_b);
-                        occ++;
-                        a_end += 2;
-                        j += 2;
+                        num::ASSIGN(vec::AT(a, occ), num::iMUL(lambda, vec::AT(b, j)));
+                        j++;
                     } else {
-                        num::aux::iC_A_MUL(j, lambda, &it_a);
-                        if (num::GET_OCC(it_a) == 0) {
-                            num::DELETE_DATA(it_a);
-                            std::copy(AT(a, i + 1), AT(a, occ--), AT(a, i));
-                            a_end -= 2;
-                        } else {
-                            it_a += 2;
+                        num::ap_int x = num::iMUL(lambda, vec::AT(b, j));
+                        num::ADD(x, a_cpy + 2 * i);
+                        if (num::IS_ZERO(x)) {
+                            occ--;
                             i++;
+                            j++;
+                            continue;
                         }
-                        j += 2;
+                        num::ASSIGN(vec::AT(a, occ), a_cpy + 2 * i);
+                        i++;
+                        j++;
                     }
                 }
 
-                if (occ + (b_end - j) / 2 > GET_SIZE(a)) {
-                    ENLARGE(a, occ + (b_end - j) / 2);
+                while(i < size_cpy) {
+                    if (occ >= GET_SIZE(a)) {
+                        ENLARGE_RANGE(a, occ);
+                        it = AT(a, occ);
+                    }
+                    a[1 + 2 * occ] = a_cpy[2 * i];
+                    a[2 + 2 * occ] = a_cpy[2 * i + 1];
+                    i++;
+                    occ++;
                 }
-                it_a = AT(a, occ);
-                occ += (b_end - j) / 2;
-                while (j != b_end) {
-                    num::aux::iC_MUL(j, lambda, &it_a);
-                    num::SET_POS(it_a, num::GET_POS(j));
-                    j += 2;
-                    it_a += 2;
+                while(j < occ_b) {
+                    if (occ >= GET_SIZE(a)) {
+                        ENLARGE_RANGE(a, occ);
+                        it = AT(a, occ);
+                    }
+                    pos_b = ((b + 1 + 2 * j)->single >> 2);
+                    num::ASSIGN(vec::AT(a, occ), num::iMUL(lambda, vec::AT(b, j)));
+                    j++;
+                    occ++;
                 }
 
-                // update vector flags
+//                delete[] a_cpy;
+                free(static_cast<void*>(a_cpy));
+
+                // update vector flags:
                 SET_OCC(a, occ);
+
+//                int occ = GET_OCC(a);
+//                int occ_b = GET_OCC(b);
+//
+////                std::cout << start_a << " " << occ << std::endl;
+//
+//                num::ap_int it = AT(a, start_a);
+//
+//                int size_cpy = (occ - start_a);
+//
+//                lambda = num::COPY(lambda);
+//
+//                SET_OCC(a, start_a);
+//                occ = start_a;
+//
+//                ULL pos_a, pos_b;
+//                int i = 0, j = start_b;
+//                ULL overflow;
+//
+//                if (start_a < occ) {
+//                    svec_node* a_cpy = static_cast<svec_node*>(malloc(2 * size_cpy * sizeof(svec_node)));
+//
+//                    auto a_cpy_ptr = a_cpy;
+//
+//                    memcpy(static_cast<void*>(a_cpy), static_cast<void*>(a + 1 + 2 * start_a), 2 * size_cpy * sizeof(svec_node));
+//
+////                    std::cout << "for" << std::endl;
+//                    for (; i < size_cpy && j != occ_b; occ++, it += 2) {
+//                        if (occ >= GET_SIZE(a)) {
+//                            ENLARGE(a);
+//                            it = AT(a, occ);
+//                        }
+//                        if ((pos_a = num::GET_POS(a_cpy + 2 * i)) < (pos_b = num::GET_POS(b + 1 + 2 * j))) {
+//                            a[1 + 2 * occ] = a_cpy[2 * i];
+//                            a[2 + 2 * occ] = a_cpy[2 * i + 1];
+//                            i++;
+//                            a_cpy_ptr += 2;
+//                        } else if (pos_a > pos_b) {
+//                            num::aux::iC_MUL(AT(b, j), lambda, &it);
+//                            num::SET_POS(AT(a, occ), pos_b);
+//                            j++;
+//                        } else {
+//                            std::cout << (a_cpy_ptr - a_cpy) << " " << std::to_string(i) << " " << std::to_string(size_cpy) << std::endl;
+//                            num::aux::iC_A_MUL(AT(b, j), lambda, &a_cpy_ptr);
+//                            if (num::IS_ZERO(a_cpy_ptr)) {
+////                                std::cout << "zero" << std::endl;
+//                                occ--;
+//                                it-=2;
+//                            } else {
+//                                a[1 + 2 * occ] = a_cpy[2 * i];
+//                                a[2 + 2 * occ] = a_cpy[2 * i + 1];
+////                        num::SET_POS(AT(a, occ), pos_a);
+//                            }
+//                            i++;
+//                            a_cpy_ptr = a_cpy + 2 * i;
+//                            j++;
+//                        }
+//                    }
+////                    std::cout << "for out" << std::endl;
+//
+//                    while(i < size_cpy) {
+//                        if (occ >= GET_SIZE(a)) {
+//                            ENLARGE_RANGE(a, occ);
+//                            it = AT(a, occ);
+//                        }
+//                        a[1 + 2 * occ] = a_cpy[2 * i];
+//                        a[2 + 2 * occ] = a_cpy[2 * i + 1];
+//                        i++;
+//                        a_cpy_ptr += 2;
+//                        occ++;
+//                        it += 2;
+//                    }
+//
+//                    free(static_cast<void*>(a_cpy));
+//                }
+//
+//
+//                while(j < occ_b) {
+//                    if (occ >= GET_SIZE(a)) {
+//                        ENLARGE_RANGE(a, occ);
+//                        it = AT(a, occ);
+//                    }
+//                    pos_b = ((b + 1 + 2 * j)->single >> 2);
+//                    num::aux::iC_MUL(AT(b, j), lambda, &it);
+//                    num::SET_POS(AT(a, occ), pos_b);
+//                    j++;
+//                    occ++;
+//                    it += 2;
+//                }
+//
+////                delete[] a_cpy;
+//
+//                // update vector flags:
+//                SET_OCC(a, occ);
+//
+////                std::cout << "out" << std::endl;
             }
 
             /**
@@ -502,9 +649,11 @@ namespace jmaerte {
                                 i++;
                             }
                         }
+
                         j += 2;
                     }
                 }
+                std::cout << std::endl;
 
                 if (occ + (b_end - j) / 2 > GET_SIZE(a)) {
                     ENLARGE(a, occ + (b_end - j) / 2);
@@ -523,61 +672,84 @@ namespace jmaerte {
             }
 
             void ADD(s_ap_int_vec& a, int start_a, num::ap_int lambda, s_ap_int_vec b, int start_b) {
-                num::ap_int a_end = AT(a, GET_OCC(a));
-                num::ap_int b_end = AT(b, GET_OCC(b));
+                int occ = GET_OCC(a);
+                int occ_b = GET_OCC(b);
 
-                num::ap_int it_a = AT(a, start_a);
-                num::ap_int j = AT(b, start_b);
+                num::ap_int it = AT(a, start_a);
+
+                int size_cpy = (occ - start_a);
+
+                svec_node* a_cpy = static_cast<svec_node*>(malloc(2 * size_cpy * sizeof(svec_node)));
+
+                memcpy(static_cast<void*>(a_cpy), static_cast<void*>(a + 1 + 2 * start_a), 2 * size_cpy * sizeof(svec_node));
+
+                SET_OCC(a, start_a);
+                occ = start_a;
+
+                lambda = num::COPY(lambda);
+
                 ULL pos_a, pos_b;
-                ULL occ = GET_OCC(a);
-                for (int i = start_a; i < occ && j != b_end;) {
-                    if ((pos_a = num::GET_POS(it_a)) < (pos_b = num::GET_POS(j))) {
+                int i = 0, j = start_b;
+                ULL overflow;
+
+                for (; i < size_cpy && j != occ_b; occ++) {
+//                    std::cout << "it: " << it << std::endl;i
+//                    std::cout << "it_cpy: " << it_cpy << std::endl;
+                    if (occ >= GET_SIZE(a)) {
+                        ENLARGE_RANGE(a, occ);
+                        it = AT(a, occ);
+//                        std::cout << "a is now " << a << " and it is " << it << std::endl;
+                    }
+//                    std::cout << i << " " << (b_end - j) / 2 << std::endl;
+                    if ((pos_a = num::GET_POS(a_cpy + 2 * i)) < (pos_b = num::GET_POS(b + 1 + 2 * j))) {
+                        a[1 + 2 * occ] = a_cpy[2 * i];
+                        a[2 + 2 * occ] = a_cpy[2 * i + 1];
                         i++;
-                        it_a += 2;
                     } else if (pos_a > pos_b) {
-                        if (occ + 1 > GET_SIZE(a)) {
-                            ENLARGE(a);
-                            it_a = AT(a, i);
-                            a_end = AT(a, occ);
-                        }
-                        // copy j and j + 1 into a.
-                        std::copy_backward(it_a, a_end, a_end + 2);
-                        num::ap_int x = num::iMUL(lambda, j);
-                        num::SET_POS(x, pos_b);
-                        num::ASSIGN(it_a, x);
-                        delete[] x;
-                        occ++;
-                        a_end += 2;
-                        j += 2;
+                        num::ASSIGN(vec::AT(a, occ), num::iMUL(lambda, vec::AT(b, j)));
+                        j++;
                     } else {
-                        num::ap_int x = num::iMUL(lambda, j);
-                        num::ADD(it_a, x);
-                        num::DELETE(x);
-                        if (num::GET_OCC(it_a) == 0) {
-                            num::DELETE_DATA(it_a);
-                            std::copy(AT(a, i + 1), AT(a, occ--), AT(a, i));
-                            a_end -= 2;
-                        } else {
-                            it_a += 2;
+                        num::ap_int x = num::iMUL(lambda, vec::AT(b, j));
+                        num::ADD(x, a_cpy + 2 * i);
+                        if (!num::IS_SINGLE(a_cpy + 2 * i)) num::DELETE_DATA(a_cpy + 2 * i);
+                        if (num::IS_ZERO(x)) {
+                            occ--;
                             i++;
+                            j++;
+                            continue;
                         }
-                        j += 2;
+                        num::ASSIGN(vec::AT(a, occ), x);
+                        i++;
+                        j++;
                     }
                 }
-                if (occ + (b_end - j) / 2 > GET_SIZE(a)) {
-                    ENLARGE(a, occ + (b_end - j) / 2);
+
+                while(i < size_cpy) {
+                    if (occ >= GET_SIZE(a)) {
+                        ENLARGE_RANGE(a, occ);
+                        it = AT(a, occ);
+                    }
+                    a[1 + 2 * occ] = a_cpy[2 * i];
+                    a[2 + 2 * occ] = a_cpy[2 * i + 1];
+                    i++;
+                    occ++;
                 }
-                it_a = AT(a, occ);
-                occ += (b_end - j) / 2;
-                while (j != b_end) {
-                    num::ap_int x = num::iMUL(lambda, j);
-                    num::SET_POS(x, num::GET_POS(j));
-                    num::ASSIGN(it_a, x);
-                    delete[] x;
-                    j += 2;
-                    it_a += 2;
+
+                while(j < occ_b) {
+                    if (occ >= GET_SIZE(a)) {
+                        ENLARGE_RANGE(a, occ);
+                        it = AT(a, occ);
+                    }
+                    pos_b = ((b + 1 + 2 * j)->single >> 2);
+                    num::ASSIGN(vec::AT(a, occ), num::iMUL(lambda, vec::AT(b, j)));
+                    j++;
+                    occ++;
                 }
-                // update vector flags
+
+//                delete[] a_cpy;
+                free(static_cast<void*>(a_cpy));
+
+                // update vector flags:
                 SET_OCC(a, occ);
             }
 

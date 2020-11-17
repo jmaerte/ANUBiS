@@ -5,6 +5,6 @@ echo Starting Build Process...
 sudo rm -rf build
 mkdir build
 cd build
-cmake .. -DCMAKE_BUILD_TYPE=Debug -DARCHITECTURE=64 -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_BUILD_TYPE=Debug -DARCHITECTURE=64
 make
 cd ..

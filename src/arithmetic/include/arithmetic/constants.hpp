@@ -12,6 +12,8 @@ typedef unsigned long long ULL;
 namespace jmaerte {
     namespace arith {
         namespace constants {
+            extern unsigned int HEAP_FACTORY_ID;
+
             extern const ARITHMETIC_EXPORT int BYTES_PER_ULL;
             extern const ARITHMETIC_EXPORT int ULL_SIZE;
             extern const ARITHMETIC_EXPORT ULL L_MASK;

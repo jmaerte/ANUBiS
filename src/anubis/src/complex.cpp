@@ -15,6 +15,7 @@
 #include <algebra/matrix.hpp>
 #include <algebra/reduction.hpp>
 #include <arithmetic/factory/stack_allocator.hpp>
+#include <arithmetic/factory/heap_allocator.hpp>
 #include <new>
 
 using namespace jmaerte::arith;
@@ -362,14 +363,15 @@ namespace jmaerte {
             }
             int SIMPLEX_SIZE = binary_storage ? get_simplex_size() : (dim + 1);
 
-            unsigned int factory_id = arith::vec::factory::REGISTER<arith::vec::stack_allocator<BLOCK_SIZE>>();
+            //unsigned int factory_id = arith::vec::factory::REGISTER<arith::vec::stack_allocator<BLOCK_SIZE>>();
+            unsigned int factory_id = arith::vec::factory::REGISTER<jmaerte::arith::vec::std_factory>();
 
             return dim == 0 ? s_int_matrix(factory_id, f[dim], [this](int i, unsigned int factory_id) {
                 return vec::NEW(factory_id, {
-                    {0ULL, {false, 1ULL}}
+                    {0u, {false, 1u}}
                 }); // reduced boundary
             }) : s_int_matrix(factory_id, f[dim], [this, top, dim, SIMPLEX_SIZE](int i, unsigned int factory_id) {
-                std::vector<std::pair<ULL, std::pair<bool, ULL>>> vec {static_cast<std::size_t>(dim + 1)};
+                std::vector<std::pair<unsigned int, std::pair<bool, unsigned int>>> vec {static_cast<std::size_t>(dim + 1)};
                 unsigned int * simplex = top + i * SIMPLEX_SIZE;
                 unsigned int k = f[dim - 1];
                 if (binary_storage) {
@@ -383,16 +385,16 @@ namespace jmaerte {
                         curr = curr ^ leading; // remove this leading bit from curr.
                         *(simplex + curr_index) ^= leading;
                         vec[pos] = std::make_pair(
-                                (ULL) (k = binary_search(this->past[dim - 1], simplex, 0, k, SIMPLEX_SIZE)),
-                                std::make_pair(pos % 2, 1ULL)
+                                (unsigned int) (k = binary_search(this->past[dim - 1], simplex, 0, k, SIMPLEX_SIZE)),
+                                std::make_pair(pos % 2, 1u)
                         );
                         *(simplex + curr_index) |= leading;
                     }
                 } else {
                     for (int pos = 0; pos < dim + 1; pos++) {
                         vec[dim - pos] = std::make_pair(
-                                (ULL) (k = mapping_search_neg(this->past[dim - 1], simplex, 0, k, pos, SIMPLEX_SIZE - 1)),
-                                std::make_pair(pos % 2, 1ULL)
+                                (unsigned int) (k = mapping_search_neg(this->past[dim - 1], simplex, 0, k, pos, SIMPLEX_SIZE - 1)),
+                                std::make_pair(pos % 2, 1u)
                         );
                     }
                 }
@@ -415,7 +417,7 @@ namespace jmaerte {
 
             return dim + 1 == f.size() ? s_int_matrix(factory_id, f[dim], [this](int i, unsigned int factory_id) {
                 return vec::NEW(factory_id, {
-                    {0ULL, {false, 0ULL}}
+                    {0u, {false, 0u}}
                 });
             }) : s_int_matrix(factory_id, f[dim], [this, low, top, dim, SIMPLEX_SIZE](int i, unsigned int factory_id) {
 //                std::vector<int> indices {};
@@ -477,7 +479,7 @@ namespace jmaerte {
 //                leading = 1u;
                 last = 0;
 
-                std::vector<std::pair<ULL, std::pair<bool, ULL>>> vec;
+                std::vector<std::pair<unsigned int, std::pair<bool, unsigned int>>> vec;
 //                for (int i = 0; i < SIMPLEX_SIZE; i++) query[i] = simplex[i];
 
                 for (int i = 0; i <= dim + 1; i++) {
@@ -528,8 +530,8 @@ namespace jmaerte {
                         if (equals) {
 //                            std::cout << "IS COBOUNDARY" << std::endl;
                             vec.push_back(std::make_pair(
-                                    (ULL) last,
-                                    std::make_pair(i % 2, 1ULL)
+                                    (unsigned int) last,
+                                    std::make_pair(i % 2, 1u)
                             ));
                         }
                         query[curr_index] ^= leading;
@@ -552,7 +554,13 @@ namespace jmaerte {
         }
 
         template<bool binary_storage>
-        std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> s_list<binary_storage>::homology(unsigned int dim) {
+        std::map<num::ap_int, unsigned int, num::comp::UNSIGNED_COMPARATOR> s_list<binary_storage>::homology(unsigned int dim) {
+            if (dim > get_dim() || dim < 0) {
+                num::ap_int zero;
+                num::NEW(zero, 0, false, 0u);
+                return {{zero, 0}};
+            }
+
             auto it_dim = smith_forms.find(dim);
             if (it_dim == smith_forms.end()) {
                 if (dim > 0 && f[dim - 1] == 0) generate(dim - 1);
@@ -569,6 +577,7 @@ namespace jmaerte {
             auto d_map = it_dim->second;
             unsigned int kernel_rank = f[dim];
 
+
             auto it = d_map.begin();
             while (it != d_map.end()) {
                 // DEBUGGING
@@ -577,7 +586,10 @@ namespace jmaerte {
                 kernel_rank -= it->second;
                 it++;
             }
-            std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> result {};
+
+            std::cout << "RANK OF BOUNDARY D" << (dim) << " IS " << (f[dim] - kernel_rank) << "." << std::endl;
+
+            std::map<num::ap_int, unsigned int, num::comp::UNSIGNED_COMPARATOR> result {};
             if (dim + 1 < f.size()) {
                 it_dim = smith_forms.find(dim + 1);
                 if (it_dim == smith_forms.end()) {
@@ -597,10 +609,13 @@ namespace jmaerte {
                         first = first.pop_front();
                     }
 
+                    
                     std::cout << rank_lower_bound << " " << kernel_rank << std::endl;
                     if (rank_lower_bound >= kernel_rank) {
                         std::cout << "Rank of partial_" << (dim + 1) << " determined by trivial rank criterium, rank is " << kernel_rank << "." << std::endl;
-                        std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> rk = {{jmaerte::arith::num::NEW(1, false, 1ULL), kernel_rank}};
+                        jmaerte::arith::num::ap_int one;
+                        jmaerte::arith::num::NEW(one, 0, false, 1u);
+                        std::map<num::ap_int, unsigned int, num::comp::UNSIGNED_COMPARATOR> rk = {{one, kernel_rank}};
                         smith_forms.emplace(dim + 1, rk);
                     } else {
                         if (f[dim + 1] < f[dim] || ALWAYS_BOUNDARY) {
@@ -616,11 +631,13 @@ namespace jmaerte {
                 auto d_m_map = it_dim->second;
                 for (auto kv : d_m_map) {
 //                    std::cout << num::STRINGIFY(kv.first) << " -> " << kv.second << "." << std::endl;
-                    if (!(num::IS_SINGLE(kv.first) == 1 && *(num::ABS(kv.first)) == 1ULL)) result.emplace(kv.first, kv.second);
+                    if (!(num::IS_SINGLE(kv.first) && *(num::ABS(kv.first)) == 1u)) result.emplace(kv.first, kv.second);
                     kernel_rank -= kv.second;
                 }
             }
-            result.emplace(num::NEW(1, false, 0ULL), kernel_rank);
+            jmaerte::arith::num::ap_int one;
+            jmaerte::arith::num::NEW(one, 0, false, 0u);
+            result.emplace(one, kernel_rank);
             return result;
         }
 
@@ -736,8 +753,8 @@ namespace jmaerte {
             return jmaerte::algebra::NEW({});
         }
 
-        std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> s_tree::homology(unsigned int i) {
-            return std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR>();
+        std::map<num::ap_int, unsigned int, num::comp::UNSIGNED_COMPARATOR> s_tree::homology(unsigned int i) {
+            return std::map<num::ap_int, unsigned int, num::comp::UNSIGNED_COMPARATOR>();
         }
 
         /***********************************************************************************************************

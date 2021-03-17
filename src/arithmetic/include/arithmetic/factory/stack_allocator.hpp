@@ -40,10 +40,10 @@ namespace jmaerte {
                             jmaerte::output::LOGGER.BAD_ALLOC);
                         throw;
                     }
-                    if (alloc == nullptr || (1 + 2 * size) + (alloc - blocks[page]) > block_size) {
+                    if (alloc == nullptr || size + (alloc - blocks[page]) > block_size) {
                         jmaerte::output::LOGGER.log(channel_id, "Allocating memory block.");
                         if (page == blocks.size() - 1) {
-                            blocks.push_back(static_cast<svec_node*>(malloc(type_size * block_size)));
+                            blocks.push_back(static_cast<num::ap_int*>(malloc(type_size * block_size)));
                             if (blocks.back() == nullptr || blocks.back() == NULL) {
                                 jmaerte::output::LOGGER.err(channel_id,
                                         "Allocation of a memory block of " + std::to_string(type_size * block_size) + " bytes failed.",
@@ -59,8 +59,9 @@ namespace jmaerte {
                         } else aligned[page] = block_size - (alloc - blocks[page]);
                         alloc = blocks[++page];
                     }
-                    s_ap_int_vec v = alloc;
-                    alloc += (1 + 2 * size);
+                    s_ap_int_vec v;
+                    v.values = alloc;
+                    alloc += size;
                     SET_FACTORY_ID(v, get_id());
                     return v;
                 }
@@ -69,21 +70,22 @@ namespace jmaerte {
                  * This function can only be performed on
                  * the last vector allocated.
                  */
-                virtual void deallocate_vec(s_ap_int_vec v) {
+                virtual void deallocate_vec(s_ap_int_vec& v) {
                     for (int i = 0; i < GET_OCC(v); i++) {
-                        num::DELETE_DATA(AT(v, i));
+                        num::DELETE_DATA(v.values[i]);
                     }
                     reset_alloc(v);
                 }
 
                 // COPY
-                virtual s_ap_int_vec copy(s_ap_int_vec v) {
-                    s_ap_int_vec res = allocate_vec(GET_OCC(v));
-                    *res = {.single = v->single};
+                virtual s_ap_int_vec copy(s_ap_int_vec& v) {
+                    s_ap_int_vec res;
+                    res.values = allocate_vec(GET_SIZE(v)).values;
+                    res.meta = v.meta;
                     SET_FACTORY_ID(res, get_id());
                     SET_SIZE(res, GET_OCC(v));
                     for (int i = 0; i < GET_OCC(v); i++) {
-                        num::ASSIGN(AT(res, i), num::COPY(AT(v, i)));
+                        num::COPY(res.values[i], v.values[i]);
                     }
                     return res;
                 }
@@ -91,18 +93,18 @@ namespace jmaerte {
                 // ENLARGE
                 virtual void enlarge(s_ap_int_vec& v, std::size_t new_size, std::size_t copy_range) {
                     reset_alloc(v);
-                    s_ap_int_vec next = allocate_vec(new_size);
-                    if (next != v) {
+                    num::ap_int* old = v.values;
+                    v.values = allocate_vec(new_size).values;
+                    if (old != v.values) {
                         // page got changed because v got too large to safe it in the remaining page space
-                        std::copy(v, AT(v, copy_range), next);
+                        std::copy(old, old + copy_range, v.values);
                     }
-                    v = next;
                     SET_SIZE(v, new_size);
                 }
 
                 // FREE
                 virtual void free() {
-                    for (s_ap_int_vec v : blocks) {
+                    for (num::ap_int* v : blocks) {
                         std::free(static_cast<void*>(v));
                     }
                 }
@@ -116,18 +118,18 @@ namespace jmaerte {
 
             private:
 
-                void reset_alloc(s_ap_int_vec v) {
-                    alloc = v;
+                void reset_alloc(s_ap_int_vec& v) {
+                    alloc = v.values;
                     if (page > 0 && alloc == blocks.back()) {
                         alloc = blocks[--page] + block_size - aligned[page];
                     }
                 }
 
-                svec_node* alloc = nullptr;
+                num::ap_int* alloc = nullptr;
                 int page = -1;
-                std::vector<svec_node*> blocks;
+                std::vector<num::ap_int*> blocks;
                 std::vector<std::size_t> aligned;
-                std::size_t type_size = sizeof(svec_node);
+                std::size_t type_size = sizeof(num::ap_int);
             };
         }
     }

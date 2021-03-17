@@ -10,7 +10,7 @@ namespace jmaerte {
     namespace arith {
         namespace vec {
             namespace factory {
-                unsigned int MAX_FACTORIES = 8u;
+                unsigned int MAX_FACTORIES = 16u;
 
                 vector_factory& dict = vector_factory::get_instance(MAX_FACTORIES);
             }

@@ -1,32 +1,28 @@
 set(LIBRARY_TARGET_NAME ARITHMETIC)
 
 set(${LIBRARY_TARGET_NAME}_SRC
-        src/operator.cpp
+        src/aux.cpp
         src/constants.cpp
-        src/misc/auxiliary.cpp
-        src/misc/divide.cpp
-        src/misc/multiply.cpp
-        src/misc/modular.cpp
+        src/num_arithmetic.cpp
+        src/vec_arithmetic.cpp
+        src/factory/allocators.cpp
         src/factory/factory.cpp
-        src/factory/Ivector_allocator.cpp
-        src/factory/allocators.cpp)
+        src/factory/Ivector_allocator.cpp)
 
 set(${LIBRARY_TARGET_NAME}_PUBLIC_HDR
+        include/arithmetic/aux.hpp
         include/arithmetic/operator.hpp
         include/arithmetic/typedef.hpp
         include/arithmetic/constants.hpp
+        include/arithmetic/factory/allocators.hpp
         include/arithmetic/factory/factory.hpp
         include/arithmetic/factory/heap_allocator.hpp
         include/arithmetic/factory/stack_allocator.hpp
         include/arithmetic/factory/Ivector_allocator.hpp)
 
 set(${LIBRARY_TARGET_NAME}_PRIVATE_HDR
-        src/arithmetic.hpp
-        src/misc/hardware/hardware.hpp
-        src/misc/inl/auxiliary.inl
-        src/misc/inl/divide.inl
-        src/misc/inl/modular.inl
-        src/misc/inl/multiply.inl)
+        src/operator.hpp
+        src/binary.hpp)
 
 add_library(${LIBRARY_TARGET_NAME} SHARED ${${LIBRARY_TARGET_NAME}_SRC} ${${LIBRARY_TARGET_NAME}_PUBLIC_HDR} ${${LIBRARY_TARGET_NAME}_PRIVATE_HDR})
 target_compile_options(${LIBRARY_TARGET_NAME} PRIVATE "SHELL:--param ggc-min-heapsize=1000000000")

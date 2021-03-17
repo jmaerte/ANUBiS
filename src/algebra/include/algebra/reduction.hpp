@@ -14,7 +14,7 @@ namespace jmaerte {
         namespace reduction {
             using namespace jmaerte::arith;
 
-            ALGEBRA_EXPORT std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> smith(s_int_matrix matrix);
+            ALGEBRA_EXPORT std::map<num::ap_int, unsigned int, num::comp::UNSIGNED_COMPARATOR> smith(s_int_matrix matrix);
 
         }
     }

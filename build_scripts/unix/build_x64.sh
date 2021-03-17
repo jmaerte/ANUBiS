@@ -2,12 +2,9 @@
 # Build ANUBiS on a Unix System!
 
 echo Starting Build Process...
-#sudo rm -rf build
-if [ -d "build" ]; then
-  sudo rm -rf build/ANUBiS build/ANUBiS-prefix
-fi
+sudo rm -rf build
 mkdir build
 cd build
-cmake .. -DARCHITECTURE=64 -DCMAKE_BUILD_TYPE=Release -DBOOST_PATH=/media/jmaerte/DATA2/boost/lib
+cmake .. -DCMAKE_BUILD_TYPE=Release -DARCHITECTURE=64
 make
 cd ..

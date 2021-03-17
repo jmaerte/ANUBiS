@@ -6,69 +6,102 @@
 #define ANUBIS_ARITHMETIC_SUPERBUILD_TYPEDEF_HPP
 
 #include <ARITHMETIC_EXPORT.h>
+#include <cinttypes>
 
 typedef unsigned long long ULL;
+typedef std::uint32_t UL;
 
 /**
  * This union has 64 bits. It can serve either as an pointer to a memory block of ULLs or as an ULL of meta-data itself.
  */
 namespace jmaerte {
     namespace arith {
-        union svec_node {
-            ULL single;
-            ULL * value;
+
+        /**
+         * A number is a memory block of two 64 bit integers:
+         *
+         *  64      64
+         * +-------+---------+
+         * | meta  | value/s |
+         * +-------+---------+
+         *
+         * where meta is of the form
+         *
+         *  32    15     15     1       1
+         * +-----+------+-----+------+--------+
+         * | pos | size | occ | sign | single |
+         * +-----+------+-----+------+--------+
+         *
+         * and value points to an array of size @code{size}-many ULLs, where the first @code{occ} 32-bit block elements
+         * are a word of the expansion of the number in base 2^32.
+         */
+
+        struct num_node {
+            ULL meta;
+
+            union {
+                UL value;
+                UL* values;
+            };
+        };
+
+
+        /**
+         * A sparse vector is a memory block of 2 64 bit integers.
+         *
+         *
+         *  64      64
+         * +-------+--------+
+         * | meta  | values |
+         * +-------+--------+
+         *
+         * Where values points to an array of num_nodes of size "size". The degree of fill-in is
+         * saved in occ and thus we always have to preserve that occ <= size.
+         *
+         *  30     30
+         * +------+-----+------------+
+         * | size | occ | factory_id |
+         * +------+-----+------------+
+         *
+         * where factory_id is the id of the factory that produces that vector and holds its pointer reference.
+         *
+         */
+
+        struct svec {
+            ULL meta;
+            num_node* values;
         };
     }
 }
 
-/**
- * A number is a memory block of two svec_nodes:
- *
- *  64      64
- * +-------+-------+
- * | meta  | value |
- * +-------+-------+
- *
- * where meta is of the form
- *
- *  1      31    16     16
- * +------+-----+------+-----+
- * | sign | pos | size | occ |
- * +------+-----+------+-----+
- *
- * and value points to an array of size @code{size}-many ULLs, where the first @code{occ} 32-bit block elements
- * are a word of the expansion of the number in base 2^32.
- */
 namespace jmaerte {
     namespace arith {
         namespace num {
-            typedef svec_node* ap_int;
+            typedef num_node ap_int;
         }
     }
 }
 
-/**
- * A sparse vector is an array of svec_nodes of length 2*n + 1. n is thereby the number of non-zero elements that
- * can be saved.
- *
- * +------+-------+-------+-...-+-------+-------+
- * | meta | num_1 : num_1 | ... | num_k : num_k |
- * +------+-------+-------+-...-+-------+-------+
- *
- * where meta is of the form
- *
- *  32     32
- * +------+-----+
- * | size | occ |
- * +------+-----+.
- *
- */
 namespace jmaerte {
     namespace arith {
         namespace vec {
-            typedef svec_node* s_ap_int_vec;
-            typedef float s_ap_float_vec; // TODO
+            typedef svec s_ap_int_vec;
+            typedef svec s_ap_float_vec;
         }
+    }
+}
+
+namespace jmaerte {
+    namespace arith {
+        /**
+        * An instance of the current state of arithmetics, i.e. this changes when an overflow occurs.
+        */
+        class context {
+        public:
+            virtual context* i_mul(num::ap_int& curr, num::ap_int& a, num::ap_int& b);
+            virtual context* add(num::ap_int& a, num::ap_int& b);
+            virtual context* mul(num::ap_int& a, num::ap_int& b);
+        };
     }
 }
 
@@ -77,11 +110,11 @@ namespace jmaerte {
         namespace num {
             namespace comp {
                 struct ARITHMETIC_EXPORT SIGNED_COMPARATOR {
-                        bool operator()(ap_int const& a, ap_int const& b) const;
+                        bool operator()(ap_int const& a, ap_int const& b);
                 };
 
                 struct ARITHMETIC_EXPORT UNSIGNED_COMPARATOR {
-                        bool operator()(ap_int const& a, ap_int const& b) const;
+                        bool operator()(ap_int const& a, ap_int const& b);
                 };
             }
         }

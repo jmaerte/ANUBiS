@@ -70,3 +70,9 @@ void thread_pool::add_work(std::function<void(Args...)> fn, Args &&... args) {
 std::size_t thread_pool::count_jobs() {
     return tasks.size();
 }
+
+void thread_pool::join() {
+    for (int i = 0; i < workers.size(); i++) {
+        workers[i].join();
+    }
+}

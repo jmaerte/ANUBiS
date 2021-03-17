@@ -11,7 +11,6 @@
 #include <vector>
 #include <tuple>
 #include <OUTPUT_EXPORT.h>
-#include "../../src/util.hpp"
 
 #define PRIVATE __attribute__((visibility("hidden")))
 #define PUBLIC __attribute__((visibility("default")))
@@ -102,6 +101,16 @@ namespace jmaerte {
                 channels.clear();
             }
         };
+
+        static std::pair<double, std::string> cast_time(double time) {
+            if (time < 1'000) return {time, "µs"};
+            else if (time < 1'000'000) return {time / 1'000, "ms"};
+
+            time /= 1'000'000;
+            if (time < 60) return {time, "s"};
+            else if (time < 3'600) return {time / 60, "min"};
+            return {time / 3'600, "h"};
+        }
 
         /**
          * Prints timings of a task with sub-tasks. The times should be given in microseconds.

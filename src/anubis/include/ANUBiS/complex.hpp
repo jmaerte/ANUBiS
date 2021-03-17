@@ -54,7 +54,7 @@ namespace jmaerte {
             virtual void facet_insert(const std::vector<unsigned int> *) = 0;
             virtual complex* im_insert(int * simplex) = 0;
             std::vector<double> laplacian_spectrum(int i);
-            virtual std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> homology(unsigned int dim) = 0;
+            virtual std::map<num::ap_int, unsigned int, num::comp::UNSIGNED_COMPARATOR> homology(unsigned int dim) = 0;
 
             std::vector<int> f_vector();
             virtual bool is_external(int * simplex) = 0;
@@ -77,7 +77,7 @@ namespace jmaerte {
             std::mutex facet_mutex;
             std::vector<std::vector<unsigned int>> facets = {};
             std::map<unsigned int, unsigned int *> past = {};
-            std::map<unsigned int, std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR>> smith_forms = {};
+            std::map<unsigned int, std::map<num::ap_int, unsigned int, num::comp::UNSIGNED_COMPARATOR>> smith_forms = {};
             int vertices = 0;
 
             s_float_matrix   laplacian(int i) override;
@@ -105,7 +105,7 @@ namespace jmaerte {
             unsigned int * generate(unsigned int dim);
             bool calculated(unsigned int dim);
 
-            std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> homology(unsigned int dim) override;
+            std::map<num::ap_int, unsigned int, num::comp::UNSIGNED_COMPARATOR> homology(unsigned int dim) override;
 
             static s_list* from_file(
                     const std::string &,
@@ -170,7 +170,7 @@ namespace jmaerte {
 
             void facet_insert(const std::vector<unsigned int> *) override;
             void print();
-            std::map<num::ap_int, unsigned int, num::comp::SIGNED_COMPARATOR> homology(unsigned int i) override;
+            std::map<num::ap_int, unsigned int, num::comp::UNSIGNED_COMPARATOR> homology(unsigned int i) override;
 
             static s_tree * from_file(
                     const std::string &,

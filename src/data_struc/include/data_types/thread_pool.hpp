@@ -160,6 +160,8 @@ public:
     template <typename... Args>
     void add_work(std::function<void(Args...)>, Args&&...);
 
+    void join();
+
     template<typename F, typename... Args>
     auto add_job(F&& fn, Args&&... args) -> boost::unique_future<typename boost::result_of<F(Args...)>::type>;
 

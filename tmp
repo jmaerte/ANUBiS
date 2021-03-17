@@ -1,0 +1,299 @@
+[MEM] Registering factory of type N7jmaerte5arith3vec11std_factoryE.
+[MEM] Factory of ID 0 created.
+[MEM] Current 
+[MAIN] Registered output channel: MEM | Factory 0 on channel id 3.
++------------------- ANUBiS -------------------+
+Copyright 2020 Julian Märte.
+Assemblage of Numerous Utilities for Big Simplicial Data Structures.
+
+A comprehensive library for computational topology.
+This project is licensed under the terms of the MIT License.
++----------------------------------------------+
+Opening file...
+Reading file...
+[IO] Found complex named Chessboard_6_6
+Dimension of Chessboard_6_6 is 5.
+CALCULATING HOMOLOGY OF DIMENSION 0!
+Generating simplices of dimension 0 in vertex storage model.
+Generated faces of dimension 0; f_0 = 36.
+Calculating smith normal form of boundary.
+[MEM] Registering factory of type N7jmaerte5arith3vec11std_factoryE.
+[MEM] Factory of ID 1 created.
+[MEM] Current 
+[MAIN] Registered output channel: MEM | Factory 1 on channel id 4.
+[MAIN] Registered output channel: Smith on channel id 5.
+[MEM] Registering factory of type N7jmaerte5arith3vec11std_factoryE.
+[MEM] Factory of ID 2 created.
+[MEM] Current 
+[MAIN] Registered output channel: MEM | Factory 2 on channel id 6.
+0 / 36 current torsion-free rank: 0; number of deferred vectors 0
+current torsion-free rank: 1
+[Smith] TORSION-FREE RANK: 1
+[Smith] SEARCHING FOR TORSION OF RANK: 0
+[MAIN] Released output channel: 4.
+[MEM] Released factory 1 successfully!
+MAXIMAL MINOR DETERMINANT IS 1
+[MAIN] Released output channel: 6.
+[MEM] Released factory 2 successfully!
+[MAIN] Released output channel: 5.
+RANK OF BOUNDARY D0 IS 1.
+Generating simplices of dimension 1 in vertex storage model.
+Generated faces of dimension 1; f_1 = 450.
+Calculating lower bound for rank.
+32 35
+Calculating smith normal form of boundary.
+[MEM] Registering factory of type N7jmaerte5arith3vec11std_factoryE.
+[MEM] Factory of ID 1 created.
+[MEM] Current 
+[MAIN] Registered output channel: MEM | Factory 1 on channel id 4.
+[MAIN] Registered output channel: Smith on channel id 5.
+[MEM] Registering factory of type N7jmaerte5arith3vec11std_factoryE.
+[MEM] Factory of ID 2 created.
+[MEM] Current 
+[MAIN] Registered output channel: MEM | Factory 2 on channel id 6.
+0 / 450 current torsion-free rank: 0; number of deferred vectors 0
+current torsion-free rank: 35
+[Smith] TORSION-FREE RANK: 35
+[Smith] SEARCHING FOR TORSION OF RANK: 0
+[MAIN] Released output channel: 4.
+[MEM] Released factory 1 successfully!
+MAXIMAL MINOR DETERMINANT IS 1
+[MAIN] Released output channel: 6.
+[MEM] Released factory 2 successfully!
+[MAIN] Released output channel: 5.
+HOMOLOGY DIM 0
+0 -> 0.
+CALCULATING HOMOLOGY OF DIMENSION 1!
+RANK OF BOUNDARY D1 IS 35.
+Generating simplices of dimension 2 in vertex storage model.
+Generated faces of dimension 2; f_2 = 2400.
+Calculating lower bound for rank.
+342 415
+Calculating smith normal form of boundary.
+[MEM] Registering factory of type N7jmaerte5arith3vec11std_factoryE.
+[MEM] Factory of ID 1 created.
+[MEM] Current 
+[MAIN] Registered output channel: MEM | Factory 1 on channel id 4.
+[MAIN] Registered output channel: Smith on channel id 5.
+[MEM] Registering factory of type N7jmaerte5arith3vec11std_factoryE.
+[MEM] Factory of ID 2 created.
+[MEM] Current 
+[MAIN] Registered output channel: MEM | Factory 2 on channel id 6.
+0 / 2400 current torsion-free rank: 0; number of deferred vectors 0
+1000 / 2400 current torsion-free rank: 415; number of deferred vectors 0
+2000 / 2400 current torsion-free rank: 415; number of deferred vectors 0
+current torsion-free rank: 415
+[Smith] TORSION-FREE RANK: 415
+[Smith] SEARCHING FOR TORSION OF RANK: 0
+[MAIN] Released output channel: 4.
+[MEM] Released factory 1 successfully!
+MAXIMAL MINOR DETERMINANT IS 1
+[MAIN] Released output channel: 6.
+[MEM] Released factory 2 successfully!
+[MAIN] Released output channel: 5.
+HOMOLOGY DIM 1
+0 -> 0.
+CALCULATING HOMOLOGY OF DIMENSION 2!
+RANK OF BOUNDARY D2 IS 415.
+Generating simplices of dimension 3 in vertex storage model.
+Generated faces of dimension 3; f_3 = 5400.
+Calculating lower bound for rank.
+1466 1985
+Calculating smith normal form of boundary.
+[MEM] Registering factory of type N7jmaerte5arith3vec11std_factoryE.
+[MEM] Factory of ID 1 created.
+[MEM] Current 
+[MAIN] Registered output channel: MEM | Factory 1 on channel id 4.
+[MAIN] Registered output channel: Smith on channel id 5.
+[MEM] Registering factory of type N7jmaerte5arith3vec11std_factoryE.
+[MEM] Factory of ID 2 created.
+[MEM] Current 
+[MAIN] Registered output channel: MEM | Factory 2 on channel id 6.
+0 / 5400 current torsion-free rank: 0; number of deferred vectors 0
+1000 / 5400 current torsion-free rank: 908; number of deferred vectors 0
+2000 / 5400 current torsion-free rank: 1576; number of deferred vectors 0
+3000 / 5400 current torsion-free rank: 1913; number of deferred vectors 0
+4000 / 5400 current torsion-free rank: 1973; number of deferred vectors 0
+5000 / 5400 current torsion-free rank: 1985; number of deferred vectors 0
+current torsion-free rank: 1985
+[Smith] TORSION-FREE RANK: 1985
+[Smith] SEARCHING FOR TORSION OF RANK: 0
+[MAIN] Released output channel: 4.
+[MEM] Released factory 1 successfully!
+MAXIMAL MINOR DETERMINANT IS 1
+[MAIN] Released output channel: 6.
+[MEM] Released factory 2 successfully!
+[MAIN] Released output channel: 5.
+HOMOLOGY DIM 2
+0 -> 0.
+CALCULATING HOMOLOGY OF DIMENSION 3!
+RANK OF BOUNDARY D3 IS 1985.
+Generating simplices of dimension 4 in vertex storage model.
+Generated faces of dimension 4; f_4 = 4320.
+Calculating lower bound for rank.
+2366 3415
+Calculating smith normal form of boundary.
+[MEM] Registering factory of type N7jmaerte5arith3vec11std_factoryE.
+[MEM] Factory of ID 1 created.
+[MEM] Current 
+[MAIN] Registered output channel: MEM | Factory 1 on channel id 4.
+[MAIN] Registered output channel: Smith on channel id 5.
+[MEM] Registering factory of type N7jmaerte5arith3vec11std_factoryE.
+[MEM] Factory of ID 2 created.
+[MEM] Current 
+[MAIN] Registered output channel: MEM | Factory 2 on channel id 6.
+0 / 4320 current torsion-free rank: 0; number of deferred vectors 0
+1000 / 4320 current torsion-free rank: 909; number of deferred vectors 68
+2000 / 4320 current torsion-free rank: 1677; number of deferred vectors 202
+3000 / 4320 current torsion-free rank: 2411; number of deferred vectors 347
+4000 / 4320 current torsion-free rank: 3207; number of deferred vectors 387
+current torsion-free rank: 3361
+[Smith] TORSION-FREE RANK: 3373
+[Smith] SEARCHING FOR TORSION OF RANK: 17
+[MAIN] Released output channel: 4.
+[MEM] Released factory 1 successfully!
+REMAINDER 0 583 3 -137184
+REMAINDER 1 1113 3 112459
+REMAINDER 2 1576 3 -217229
+REMAINDER 3 1986 3 123066
+REMAINDER 4 2348 3 106851
+REMAINDER 5 2667 -2 17136
+REMAINDER 6 3030 3 147
+REMAINDER 7 3349 2 -5
+REMAINDER 8 3664 3 -30
+REMAINDER 9 3935 2 7
+REMAINDER 10 4207 2 16
+REMAINDER 11 4437 2 -16
+REMAINDER 12 4615 3 39
+REMAINDER 13 4762 2 -11
+REMAINDER 14 4910 2 7
+REMAINDER 15 5089 3 3
+REMAINDER 16 5275 3 3
+MAXIMAL MINOR DETERMINANT IS 7558272
+[Smith] Calculating torsion 1 / 17
+col 1
+row
+[Smith] Calculating torsion 2 / 17
+col 1
+row
+UNSWAPPED VALUES: 1113 3 4208 -1
+SWAPPED VALUES: 1113 -1 4208 3
+col 7
+-1 -1
+-1 -3
+-1 -167
+-1 -1008
+-1 -1173
+-1 2072
+row
+[Smith] Calculating torsion 3 / 17
+col 1
+row
+[Smith] Calculating torsion 4 / 17
+col 1
+row
+[Smith] Calculating torsion 5 / 17
+col 1
+row
+[Smith] Calculating torsion 6 / 17
+col 1
+row
+UNSWAPPED VALUES: 2667 -2 2668 1
+SWAPPED VALUES: 2667 1 2668 -2
+row
+[Smith] Calculating torsion 7 / 17
+col 1
+row
+[Smith] Calculating torsion 8 / 17
+col 1
+row
+UNSWAPPED VALUES: 3349 2 3350 -1
+SWAPPED VALUES: 3349 -1 3350 2
+row
+[Smith] Calculating torsion 9 / 17
+col 1
+row
+[Smith] Calculating torsion 10 / 17
+col 1
+row
+UNSWAPPED VALUES: 3935 2 3936 -1
+SWAPPED VALUES: 3935 -1 3936 2
+row
+[Smith] Calculating torsion 11 / 17
+col 1
+row
+[Smith] Calculating torsion 12 / 17
+col 1
+row
+UNSWAPPED VALUES: 4437 2 4438 -1
+SWAPPED VALUES: 4437 -1 4438 2
+row
+[Smith] Calculating torsion 13 / 17
+col 1
+row
+[Smith] Calculating torsion 14 / 17
+col 1
+row
+UNSWAPPED VALUES: 4762 2 4763 -1
+SWAPPED VALUES: 4762 -1 4763 2
+row
+[Smith] Calculating torsion 15 / 17
+col 1
+row
+UNSWAPPED VALUES: 4910 2 4911 -1
+SWAPPED VALUES: 4910 -1 4911 2
+row
+[Smith] Calculating torsion 16 / 17
+col 1
+row
+[Smith] Calculating torsion 17 / 17
+col 1
+row
+[MAIN] Released output channel: 6.
+[MEM] Released factory 2 successfully!
+[MAIN] Released output channel: 5.
+HOMOLOGY DIM 3
+0 -> 25.
+3 -> 10.
+CALCULATING HOMOLOGY OF DIMENSION 4!
+RANK OF BOUNDARY D4 IS 3390.
+Generating simplices of dimension 5 in vertex storage model.
+Generated faces of dimension 5; f_5 = 720.
+Calculating lower bound for rank.
+720 930
+Calculating smith normal form of boundary.
+[MEM] Registering factory of type N7jmaerte5arith3vec11std_factoryE.
+[MEM] Factory of ID 1 created.
+[MEM] Current 
+[MAIN] Registered output channel: MEM | Factory 1 on channel id 4.
+[MAIN] Registered output channel: Smith on channel id 5.
+[MEM] Registering factory of type N7jmaerte5arith3vec11std_factoryE.
+[MEM] Factory of ID 2 created.
+[MEM] Current 
+[MAIN] Registered output channel: MEM | Factory 2 on channel id 6.
+0 / 720 current torsion-free rank: 0; number of deferred vectors 0
+current torsion-free rank: 720
+[Smith] TORSION-FREE RANK: 720
+[Smith] SEARCHING FOR TORSION OF RANK: 0
+[MAIN] Released output channel: 4.
+[MEM] Released factory 1 successfully!
+MAXIMAL MINOR DETERMINANT IS 1
+[MAIN] Released output channel: 6.
+[MEM] Released factory 2 successfully!
+[MAIN] Released output channel: 5.
+HOMOLOGY DIM 4
+0 -> 210.
+CALCULATING HOMOLOGY OF DIMENSION 5!
+RANK OF BOUNDARY D5 IS 720.
+HOMOLOGY DIM 5
+0 -> 0.
+CALCULATING HOMOLOGY OF DIMENSION 6!
+HOMOLOGY DIM 6
+0 -> 0.
+[TIME] 	+------------------------------------------------------------------------
+	 Time elapsed for Homology of Chessboard_6_6: 31.185142s
+	+------------------------------------------------------------------------
+Press any key to exit...[MAIN] Released output channel 1.
+[MAIN] Released output channel 2.
+[MAIN] Released output channel 3.
+[MAIN] Releasing this channel (0) now.

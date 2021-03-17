@@ -18,15 +18,17 @@ namespace jmaerte {
             public:
                 vector_allocator();
 
+                virtual ~vector_allocator() {}
+
                 vector_allocator(const vector_allocator&) = delete;
                 void operator=(const vector_allocator&) = delete;
 
                 // ALLOCATION
                 virtual s_ap_int_vec allocate_vec(std::size_t) = 0;
-                virtual void deallocate_vec(s_ap_int_vec) = 0;
+                virtual void deallocate_vec(s_ap_int_vec&) = 0;
 
                 // COPY
-                virtual s_ap_int_vec copy(s_ap_int_vec) = 0;
+                virtual s_ap_int_vec copy(s_ap_int_vec&) = 0;
 
                 // ENLARGE
                 virtual void enlarge(s_ap_int_vec&, std::size_t, std::size_t) = 0;
@@ -37,6 +39,11 @@ namespace jmaerte {
                 virtual void print() { }
 
                 unsigned int get_id() {
+                    return ID;
+                }
+
+                unsigned int set_id(unsigned int id) {
+                    ID = id;
                     return ID;
                 }
 

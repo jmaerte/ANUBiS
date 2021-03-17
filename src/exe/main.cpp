@@ -32,7 +32,7 @@ int main() {
 //
 //
 //    auto c = jmaerte::anubis::s_list<false>::from_file("\\\\mathematik.uni-marburg.de\\DFS\\HOMES.Windows\\jmaerte\\Downloads\\c77");
-    auto c = jmaerte::anubis::s_list<false>::from_file(getenv("HOME") + slash + "Downloads" + slash + "c77");
+    auto c = jmaerte::anubis::s_list<false>::from_file(getenv("HOME") + slash + "Downloads" + slash + "c66");
 
     std::cout << "Dimension of " << c->get_name() << " is " << c->get_dim() << "." << std::endl;
 

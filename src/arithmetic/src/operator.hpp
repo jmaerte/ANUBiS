@@ -1,373 +1,279 @@
-#ifndef ANUBIS_ARITHMETIC_SUPERBUILD_SRC_OPERATOR_PRIVATE_HPP
-#define ANUBIS_ARITHMETIC_SUPERBUILD_SRC_OPERATOR_PRIVATE_HPP
+//
+// Created by jmaerte on 04.12.20.
+//
 
-//
-// Created by jmaerte on 23.03.20.
-//
+#ifndef ANUBIS_SUPERBUILD_OPERATOR_HPP
+#define ANUBIS_SUPERBUILD_OPERATOR_HPP
 
 #include "arithmetic/operator.hpp"
-#include "arithmetic.hpp"
-#include "misc/hardware/hardware.hpp"
-#include <algorithm>
-#include <vector>
-#include <cstdlib>
-#include <bitset>
-#include <stdexcept>
-#include <string>
 #include "arithmetic/constants.hpp"
-#include "arithmetic/factory/factory.hpp"
-#include "arithmetic/factory/allocators.hpp"
+#include "arithmetic/aux.hpp"
+#include <output/logger.hpp>
+#include <algorithm>
+#include <math.h>
 
 namespace jmaerte {
     namespace arith {
-
-/***********************************************************************************************************************
- * NUM - DECL
- **********************************************************************************************************************/
         namespace num {
+
+
             /*
              * OPERATORS
              */
 
-            static inline std::string STRINGIFY(ap_int const n) {
-                if (IS_SINGLE(n)) return (GET_SIGN(n) ? "-" : "") + std::to_string((n+1)->single);
+            static inline std::string STRINGIFY(ap_int const& n) {
+                if (IS_SINGLE(n)) return (GET_SIGN(n) ? "-" : "") + std::to_string(n.value);
                 std::string res = std::string("(") + (GET_SIGN(n) ? "-" : "");
-                bool set = false;
-                ULL pos;
-                for (int i = GET_OCC(n) - 1; i >= 0; i--) {
-                    pos = 1ULL << 63;
-                    while (pos != 0) {
-                        if (set) {
-                            res += (aux::GET(n, i) & pos) != 0 ? "1" : "0";
-                        } else {
-                            if (aux::GET(n, i) & pos) {
-                                set = true;
-                                res += "1";
-                            }
-                        }
-                        pos >>= 1;
-                    }
-                }
-                if (!set) res += "0";
+                res += aux::STRINGIFY(n.values, num::GET_OCC(n));
                 res += ")_2";
                 return res;
             }
 
-            static inline bool IS_SINGLE(ap_int const n) {
-                return n->single & num::SINGLE_MASK;
+            static inline unsigned int GET_POS(ap_int const& n) {
+                return IS_SINGLE(n) ? (n.meta >> 2) : ((n.meta & num::POS) >> num::POS_SHIFT);
             }
 
-            static inline unsigned int GET_POS(ap_int const n) {
-                return IS_SINGLE(n) ? (n->single >> 2) : (n->single >> 32);
+            static inline unsigned int GET_OCC(ap_int const& n) {
+                return IS_SINGLE(n) ? (n.value == 0 ? 0ULL : 1ULL) : ((n.meta & num::OCC) >> num::OCC_SHIFT);
             }
 
-            static inline unsigned int GET_OCC(ap_int const n) {
-                return IS_SINGLE(n) ? 1 : (n->single & constants::L_MASK) >> 17;
+            static inline unsigned int GET_SIZE(ap_int const& n) {
+                return IS_SINGLE(n) ? 1 : ((n.meta & num::SIZE) >> num::SIZE_SHIFT);
             }
 
-            static inline ULL* ABS(ap_int const n) {
-                return n->single & num::SINGLE_MASK ? &((n + 1)->single) : (n + 1)->value;
+            static inline bool IS_SINGLE(ap_int const& n) {
+                return (n.meta & num::SINGLE) >> num::SINGLE_SHIFT;
             }
 
-            static inline bool GET_SIGN(ap_int const n) {
-                return (n->single & num::SIGN_MASK) >> 1;
+            static inline bool GET_SIGN(ap_int const& n) {
+                return (n.meta & num::SIGN) >> num::SIGN_SHIFT;
             }
 
-            static inline bool IS_NA(ap_int a) {
-                return a == nullptr;
-            }
-
-            static inline unsigned int GET_SIZE(ap_int const n) {
-                return IS_SINGLE(n) ? 1 : (n->single & num::SIZE_MASK) >> 2;
-            }
-
-            static inline void SET_POS(ap_int n, int pos) {
-                if (IS_SINGLE(n)) n->single = (n->single & 3ULL) | (((ULL) pos) << 2);
-                else n->single = (n->single & ~num::POS_MASK) | (((ULL) pos) << 32);
-            }
-
-            static inline void SET_SIZE(ap_int n, int size) {
-                n->single = n->single & ~num::SIZE_MASK | (((ULL) size) << 2);
-            }
-
-            static inline void SET_OCC(ap_int n, int occ) {
-                n->single = n->single & ~num::OCC_MASK | ((ULL) occ) << 17;
-            }
-
-            static inline void SET_SIGN(ap_int n, bool sign) {
-                n->single = n->single & ~num::SIGN_MASK | ((sign ? 1ULL : 0ULL) << 1);
-            }
-
-            static inline void MAKE_MULTI(ap_int a, int initial_size) {
-                a->single = (a->single & ~3ULL) << 30 | (1ULL << 17) | ((ULL) initial_size << 2) | (a->single & 2ULL);
-                ULL val = (a + 1)->single;
-                *(a + 1) = (svec_node){.value = new ULL[initial_size] { }};
-                *((a + 1)->value) = val;
-            }
-
-            static inline void MAKE_MULTI(ap_int a, ULL value) {
-                MAKE_MULTI(a, 2);
-                if (value) SET_OCC(a, 2);
-                *((a + 1)->value + 1) = value;
-            }
-
-            static inline void MAKE_SINGLE(ap_int a) {
-                a->single = 1ULL | (a->single & 2ULL) | (a->single >> 32);
-                ULL val = *((a + 1)->value);
-                delete[] (a + 1)->value;
-                *(a + 1) = (svec_node){.single = val};
-            }
-
-            static inline void SWITCH_SIGN(ap_int n) {
-                n->single ^= num::SIGN_MASK;
-            }
-
-            static inline void ASSIGN(ap_int a, ap_int const &b) {
-                a->single = b->single;
-                if (IS_SINGLE(a)) (a + 1)->single = (b + 1)->single;
-                else (a + 1)->value = (b + 1)->value;
-            }
-
-            static inline void OVERWRITE(ap_int a, ap_int const &b) {
-                if (!IS_NA(a)) DELETE_DATA(a);
-                *a = *b;
-                *(a + 1) = *(b + 1);
-            }
-
-            static inline void ENLARGE(ap_int n, int size) {
-                if (size <= GET_SIZE(n)) return;
-                ULL* next = new ULL[size] { };
-                std::copy(ABS(n), ABS(n) + GET_OCC(n), next);
-                delete[] (n + 1)->value;
-                (n + 1)->value = next;
-                SET_SIZE(n, size);
-            }
-
-            static inline void ENLARGE(ap_int n) {
-                ENLARGE(n, 2 * GET_SIZE(n));
-            }
-
-            /*
-             * (DE-)ALLOCATION
-             */
-
-            static inline ap_int NEW(ULL initial_size, bool sign, ULL value) {
-                if (initial_size == 1) return NEW(sign, value);
-                ap_int i = new svec_node[2]{
-                        {.single = (sign ? num::SIGN_MASK : 0ULL) | ((initial_size & constants::LL_MASK) << 2) |
-                                 (value ? 1ULL : 0ULL) << 17},
-                        {.value = new ULL[initial_size] { }}
-                };
-                *((i + 1)->value) = value;
-                return i;
-            }
-
-            static inline ap_int NEW(bool sign, ULL value) {
-                return new svec_node[2]{
-                    {.single = (sign ? 1ULL : 0ULL) << 1 | 1ULL},
-                    {.single = value}
-                };
-            }
-
-            static inline void NEW(ap_int dest, bool sign, ULL value) {
-                *dest = {.single = ((sign ? 1ULL : 0ULL) << 1) | 1ULL};
-                *(dest + 1) = {.single = value};
-            }
-
-            static inline ap_int NEW(ULL* value, ULL size, ULL occ, bool sign) {
-                return new svec_node[2]{
-                        {.single = (sign ? num::SIGN_MASK : 0u) | (size << 2) | (occ << 17)},
-                        {.value = value}
-                };
-            }
-
-            static inline ap_int COPY(ap_int const n) {
-                if (IS_SINGLE(n)) {
-                    ap_int res = NEW(GET_SIGN(n), *ABS(n));
-                    SET_POS(res, GET_POS(n));
-                    return res;
+            static inline bool IS_ZERO(ap_int const& n) {
+                if (IS_SINGLE(n)) return n.value == 0;
+                //return GET_OCC(n) == 0;
+                for (int i = GET_OCC(n) - 1; i >= 0; i--) {
+                    if (n.values[i] != 0) return false;
                 }
-                ap_int res = NEW(GET_OCC(n), GET_SIGN(n), 0ULL);
-                *res = *n;
-                std::copy(ABS(n), ABS(n) + GET_OCC(n), ABS(res)); // was std::copy before.
-                return res;
+                return true;
             }
 
-            static inline void DELETE_DATA(ap_int i) {
-//                std::free((i + 1)->value);
-                if (!IS_SINGLE(i)) delete[] (i + 1)->value;
+
+            static inline const UL* ABS(ap_int const& n) {
+                return IS_SINGLE(n) ? &(n.value) : n.values;
+            }
+            static inline UL* DATA(ap_int& n) {
+                return IS_SINGLE(n) ? &(n.value) : n.values;
             }
 
-            static inline void DELETE(ap_int i) {
-                DELETE_DATA(i);
-                delete[] i;
+            // MUTATORS
+            static void SET_SIZE(ap_int& n, unsigned int size) {
+                if (IS_SINGLE(n)) throw std::runtime_error("Tried to set size of single number");
+                n.meta = (n.meta & ~num::SIZE) | (((ULL) size) << num::SIZE_SHIFT);
+            }
+
+            static void SET_POS(ap_int& n, unsigned int pos) {
+                if (IS_SINGLE(n)) n.meta = (n.meta & 3ULL) | (((ULL) pos) << 2);
+                else n.meta = (n.meta & ~num::POS) | (((ULL) pos) << num::POS_SHIFT);
+            }
+
+            static inline void SET_OCC(ap_int& n, unsigned int occ) {
+                if (IS_SINGLE(n)) throw std::runtime_error("Tried to set occ of single number");
+
+                n.meta = (n.meta & ~num::OCC) | (((ULL) occ) << num::OCC_SHIFT);
+
+                if (occ <= 1) aux::MAKE_SINGLE(n);
+            }
+
+            static inline void SET_SIGN(ap_int& n, bool sign) {
+                n.meta = (n.meta & ~num::SIGN) | ((sign ? 1ULL : 0ULL) << num::SIGN_SHIFT);
+            }
+
+            static inline void SWITCH_SIGN(ap_int& n) {
+                n.meta ^= num::SIGN;
+            }
+
+            static inline void SWAP_VALUES(ap_int& a, ap_int& b) {
+                ap_int temp = b;
+                b = a;
+                a = temp;
+            }
+
+            // ALLOCATORS
+            static inline void COPY(ap_int& m, ap_int const& n) {
+                m.meta = n.meta;
+                if (IS_SINGLE(n)) m.value = n.value;
+                else {
+
+                    aux::allocation_mutex.lock();
+                    m.values = new UL[GET_SIZE(n)] { };
+                    aux::allocation_mutex.unlock();
+
+                    std::copy(n.values, n.values + GET_OCC(n), m.values);
+                }
+            }
+
+            static inline void DELETE_DATA(ap_int& n) {
+                if (!IS_SINGLE(n)) {
+
+                    aux::allocation_mutex.lock();
+                    delete[] n.values;
+                    aux::allocation_mutex.unlock();
+                }
+            }
+
+            static inline void NEW(ap_int& n, int pos, bool sign, int value) {
+                n.meta = 1ULL | ((sign ? 1ULL : 0ULL) << num::SIGN_SHIFT) | (((ULL) pos) << 2);
+                n.value = value;
+            }
+
+            static inline void NEW_MULTI(ap_int& n, int pos, bool sign, int occ, int size, UL* value) {
+                n.meta = ((sign ? 1ULL : 0ULL) << num::SIGN_SHIFT) | (((ULL) pos) << num::POS_SHIFT) | (((ULL) size) << num::SIZE_SHIFT) | (((ULL) occ) << num::OCC_SHIFT);
+                n.values = value;
+                if (occ <= 1) aux::MAKE_SINGLE(n);
             }
 
             /*
              * ARITHMETIC
              */
 
-            static inline void ADD(ap_int a, ap_int b) {
-                if (GET_SIGN(a) != GET_SIGN(b)) {
-                    SWITCH_SIGN(a);
-                    SUB(a, b);
-                    SWITCH_SIGN(a);
-                } else {
-                    if (!IS_SINGLE(b)) {
-                        if (IS_SINGLE(a)) {
-                            MAKE_MULTI(a, MAX(GET_OCC(a), GET_OCC(b)) + 1);
-                        } else ENLARGE(a, MAX(GET_OCC(a), GET_OCC(b)) + 1);
-                        SET_OCC(a, MAX(GET_OCC(a), GET_OCC(b)) + aux::ADD_DATA(ABS(a), ABS(b), GET_OCC(a), GET_OCC(b)));
-                    } else {
-                        if (IS_SINGLE(a)) {
-                            unsigned char c = adc(0, *ABS(a), *ABS(b), ABS(a));
-                            if (c) {
-                                MAKE_MULTI(a, 2);
-                                *(ABS(a) + 1) = 1ULL;
-                            }
-                        } else {
-                            aux::C_ADD(a, *ABS(b));
-                        }
-                    }
-                }
-            }
-
-            static inline void SUB(ap_int a, ap_int b) {
-                if (GET_SIGN(a) != GET_SIGN(b)) {
-                    SWITCH_SIGN(a);
-                    ADD(a, b);
-                    SWITCH_SIGN(a);
-                } else {
-                    if (!IS_SINGLE(b)) {
-                        ULL size = MAX(GET_OCC(a), GET_OCC(b)) + 1;
-                        if (IS_SINGLE(a)) {
-                            MAKE_MULTI(a, size);
-                        } else ENLARGE(a, size);
-                        SET_SIGN(a, GET_SIGN(a) ^ aux::SUB_DATA(ABS(a), ABS(b), GET_OCC(a), GET_OCC(b)));
-                        aux::STRIP(ABS(a), size);
-                        if (size <= 1) {
-                            MAKE_SINGLE(a);
-                        } else SET_OCC(a, size);
-                    } else {
-                        if (IS_SINGLE(a)) {
-                            ULL va = *ABS(a), vb = *ABS(b);
-                            *ABS(a) = va < vb ? vb - va : va - vb;
-                            SET_SIGN(a, GET_SIGN(a) ^ va < vb);
-                        } else {
-                            aux::C_SUB(a, *ABS(b));
-                        }
-                    }
-                }
-            }
-
-            /**
-             * Calculates a (mod b) where b is an odd modulus. Some precomputation is necessary.
-             * @param a dividend
-             * @param b divisor/modulus
-             * @param R_POW R^n (mod b), where R is the radix of b, i.e. R = r^m, r = 2^64 and r^{n-1} <= b < r^n.
-             *          and n is such that R^{n-1} <= a < R^n.
-             * @param inv mod-inverse of b, i.e. b * inv = 1 (mod R)
-             */
-            static inline void MOD(ap_int a, ap_int b, ap_int R_POW, ap_int inv) {
-                aux::modular::SREM(a, b, inv);
-                if (GET_OCC(a)) aux::modular::MODMUL(a, R_POW, b, inv);
-            }
         }
 
-/***********************************************************************************************************************
- * VEC - AUX
- **********************************************************************************************************************/
-
-        namespace vec {}
-
-/***********************************************************************************************************************
- * VEC - DECL
- **********************************************************************************************************************/
-
         namespace vec {
+
             /*
              * OPERATORS
              */
 
-            static inline bool GET_IS_ALL_SINGLE(s_ap_int_vec vec) {
-                return vec->single & vec::ALL_SINGLE_MASK;
+            static inline bool IS_ZERO(s_ap_int_vec const& vec) {
+                return GET_OCC(vec) == 0;
             }
 
-            static inline int GET_SIZE(s_ap_int_vec v) {
-                return (v->single & vec::SIZE_MASK) >> 4;
+            static inline unsigned int GET_OCC(s_ap_int_vec const& vec) {
+                return (vec.meta & vec::OCC) >> vec::OCC_SHIFT;
             }
 
-            static inline int GET_OCC(s_ap_int_vec v) {
-                return v->single >> 34;
+            static inline unsigned int GET_SIZE(s_ap_int_vec const& vec) {
+                return (vec.meta & vec::SIZE) >> vec::SIZE_SHIFT;
             }
 
-            static inline unsigned int GET_FACTORY_ID(s_ap_int_vec v) {
-                return (v->single & vec::FACTORY_ID_MASK) >> 1;
+            static inline unsigned int GET_FACTORY_ID(s_ap_int_vec const& vec) {
+                return (vec.meta & vec::FACTORY_ID) >> vec::FACTORY_ID_SHIFT;
             }
 
-            static inline void SET_SIZE(s_ap_int_vec v, int size) {
-                v->single = v->single & ~vec::SIZE_MASK | ((ULL) size << 4);
-            }
-
-            static inline void SET_OCC(s_ap_int_vec v, int occ) {
-                v->single = v->single & ~vec::OCC_MASK | (((ULL) occ) << 34);
-            }
-
-            static inline void SET_FACTORY_ID(s_ap_int_vec v, unsigned int id) {
-                if (id > factory::MAX_FACTORIES) throw std::out_of_range("[Mem] ERROR - Factory id " + std::to_string(id) + " is invalid!");
-                v->single = v->single & ~vec::FACTORY_ID_MASK | (id << 1);
-            }
-
-            static inline num::ap_int AT(s_ap_int_vec v, int i) {
-                return v + 1 + 2 * i;
-            }
-
-            static inline void ENLARGE_RANGE(s_ap_int_vec& v, int size, int copy_range) {
-                factory::dict.get_factory(v)->enlarge(v, size, copy_range);
-            }
-
-            static inline void ENLARGE_RANGE(s_ap_int_vec& v, int copy_range) {
-                ENLARGE_RANGE(v, 2 * GET_SIZE(v), copy_range);
-            }
-
-            static inline void ENLARGE(s_ap_int_vec& v, int size) {
-                ENLARGE_RANGE(v, size, GET_OCC(v));
-            }
-
-            static inline void ENLARGE(s_ap_int_vec& v) {
-                ENLARGE(v, 2 * GET_SIZE(v));
-            }
-
-            static inline void SWITCH_SIGNS(s_ap_int_vec v) {
+            static inline unsigned int FIND_POS(s_ap_int_vec const& v, unsigned int pos) {
                 int occ = GET_OCC(v);
-                for (int i = 0; i < occ; i++) {
-                    num::SWITCH_SIGN(AT(v, i));
+                if (occ == 0 || num::GET_POS(AT(v, occ - 1)) < pos) return occ;
+                if (num::GET_POS(AT(v, 0)) > pos) return 0;
+                int min = 0;
+                int max = occ;
+                int compare = 0;
+                while (min < max) {
+                    int mid = (min + max) / 2;
+                    if (num::GET_POS(AT(v, mid)) < pos) min = mid + 1;
+                    else if (num::GET_POS(AT(v, mid)) > pos) max = mid;
+                    else return mid;
                 }
+                return min;
             }
 
-            static inline void SWAP_VALUES(s_ap_int_vec v, int i, int j) {
-                ULL temp = AT(v, i)->single;
-                int i_pos = num::GET_POS(AT(v, i));
-                int j_pos = num::GET_POS(AT(v, j));
-
-                AT(v, i)->single = AT(v, j)->single;
-                AT(v, j)->single = temp;
-
-                num::SET_POS(AT(v, i), i_pos);
-                num::SET_POS(AT(v, j), j_pos);
-                // swap data pointers
-                auto a = AT(v, i) + 1;
-                *(AT(v, i) + 1) = *(AT(v, j) + 1);
-                *(AT(v, j) + 1) = *a;
+            // MUTATORS
+            static inline void SET_SIZE(s_ap_int_vec& vec, unsigned int size) {
+                vec.meta = (vec.meta & ~vec::SIZE) | (((ULL) size) << vec::SIZE_SHIFT);
             }
 
-            static inline void SET(s_ap_int_vec v, int k, num::ap_int n) {
-                num::ASSIGN(AT(v, k), n); // OVERWRITE?
+            static inline void SET_OCC(s_ap_int_vec& vec, unsigned int occ) {
+                vec.meta = (vec.meta & ~vec::OCC) | (((ULL) occ) << vec::OCC_SHIFT);
             }
+
+            static inline void SWITCH_SIGNS(s_ap_int_vec& vec) {
+                for (int i = 0; i < vec::GET_OCC(vec); i++) num::SWITCH_SIGN(vec.values[i]);
+            }
+
+            static inline void SET_FACTORY_ID(s_ap_int_vec& vec, unsigned int factory_id) {
+                vec.meta = (vec.meta & ~vec::FACTORY_ID) | (((ULL) factory_id) << vec::FACTORY_ID_SHIFT);
+            }
+
+            static inline void DELETE_POS(s_ap_int_vec& vec, unsigned int pos) {
+                num::DELETE_DATA(vec.values[pos]);
+                std::copy(vec.values + pos + 1, vec.values + vec::GET_OCC(vec), vec.values + pos);
+                vec::SET_OCC(vec, vec::GET_OCC(vec) - 1);
+            }
+
+            static inline void SWAP_VALUES(s_ap_int_vec& vec, int pos1, int pos2) {
+                std::cout << "UNSWAPPED VALUES: " << num::GET_POS(vec.values[pos1]) << " " << num::STRINGIFY(vec.values[pos1]) << " " << num::GET_POS(vec.values[pos2]) << " " << num::STRINGIFY(vec.values[pos2]) << std::endl;
+
+                int p1 = num::GET_POS(vec.values[pos1]);
+                int p2 = num::GET_POS(vec.values[pos2]);
+
+                num::ap_int temp = vec.values[pos1];
+                vec.values[pos1] = vec.values[pos2];
+                vec.values[pos2] = temp;
+
+                num::SET_POS(vec.values[pos1], p1);
+                num::SET_POS(vec.values[pos2], p2);
+
+                std::cout << "SWAPPED VALUES: " << num::GET_POS(vec.values[pos1]) << " " << num::STRINGIFY(vec.values[pos1]) << " " << num::GET_POS(vec.values[pos2]) << " " << num::STRINGIFY(vec.values[pos2]) << std::endl;
+            }
+
+            // GETTERS WITH MUTABLE RETURN VALUES
+            static inline const num::ap_int& AT(const s_ap_int_vec& vec, int i) {
+                if (i < 0 || i >= GET_OCC(vec)) throw std::runtime_error("Out of bounds access of vector elements!");
+                return vec.values[i];
+            }
+
+            static inline num::ap_int& GET(s_ap_int_vec& vec, int i) {
+                if (i < 0 || i >= GET_OCC(vec)) throw std::runtime_error("Out of bounds access of vector elements!");
+                return vec.values[i];
+            }
+
+            // ALLOCATORS
+            static inline void DELETE(s_ap_int_vec& vec) {
+                factory::dict.get_factory(GET_FACTORY_ID(vec))->deallocate_vec(vec);
+            }
+
+            static inline s_ap_int_vec COPY(int factory_id, s_ap_int_vec& vec) {
+                return factory::dict.get_factory(factory_id)->copy(vec);
+            }
+
+            static inline s_ap_int_vec NEW(unsigned int factory_id, std::vector<std::pair<UL, std::pair<bool, UL>>> vector) {
+                s_ap_int_vec v = factory::dict.get_factory(factory_id)->allocate_vec(vector.size());
+                v.meta = (((ULL) vector.size()) << vec::SIZE_SHIFT) | (((ULL) vector.size()) << vec::OCC_SHIFT) | (factory_id << vec::FACTORY_ID_SHIFT);
+                int i = 0;
+                for (auto it = vector.begin(); it != vector.end(); ++it) {
+                    num::NEW(v.values[i], it->first, it->second.first, it->second.second);
+                    i++;
+                }
+                return v;
+            }
+
+            static inline void ENLARGE(s_ap_int_vec& vec) {
+                factory::dict.get_factory(GET_FACTORY_ID(vec))->enlarge(vec, ceil(constants::PHI * GET_SIZE(vec)), GET_OCC(vec));
+            }
+
+            static inline void ENLARGE(s_ap_int_vec& vec, unsigned int occ) {
+                factory::dict.get_factory(GET_FACTORY_ID(vec))->enlarge(vec, ceil(constants::PHI * GET_SIZE(vec)), occ);
+            }
+
+            static inline void ENLARGE(s_ap_int_vec& vec, unsigned int occ, unsigned int size) {
+                factory::dict.get_factory(GET_FACTORY_ID(vec))->enlarge(vec, size, occ);
+            }
+
+            static inline void PACK_VEC(s_ap_int_vec& vec) {
+                std::cout << "saved " << (4 * (vec::GET_SIZE(vec) - vec::GET_OCC(vec))) << " bytes of space" << std::endl;
+                factory::dict.get_factory(GET_FACTORY_ID(vec))->enlarge(vec, GET_OCC(vec), GET_OCC(vec));
+            }
+
 
             /*
-             * (DE-)ALLOCATION
+             * ARITHMETIC
              */
+
+            static inline void REDUCE(s_ap_int_vec& v, s_ap_int_vec& trivial, int k) {
+                num::ap_int lambda = AT(v, k);
+                ADD(v, k + 1, lambda, trivial, 1, k);
+                num::DELETE_DATA(lambda);
+            }
 
             namespace factory {
 
@@ -385,60 +291,8 @@ namespace jmaerte {
                 }
             }
 
-            static inline s_ap_int_vec NEW(unsigned int factory_id, std::vector < std::pair < ULL, std::pair < bool, ULL > > > vector) {
-                svec_node* v = factory::dict.get_factory(factory_id)->allocate_vec(vector.size());
-                *v = {.single = 1ULL | (((ULL) vector.size()) << 34) | (((ULL) vector.size()) << 4) | (factory_id << 1)};
-                int i = 1;
-                for (auto it = vector.begin(); it != vector.end(); it++) {
-                    num::NEW(v + i, it->second.first, it->second.second);
-                    num::SET_POS(v + i, it->first);
-                    i += 2;
-                }
-                return v;
-            }
-
-            static inline s_ap_int_vec COPY(unsigned int factory_id, s_ap_int_vec v) {
-                return factory::dict.get_factory(factory_id)->copy(v);
-            }
-
-            static inline void DELETE(s_ap_int_vec& v) {
-                factory::dict.get_factory(GET_FACTORY_ID(v))->deallocate_vec(v);
-            }
-
-            static inline void DELETE_POS(s_ap_int_vec v, int i) {
-                num::DELETE_DATA(AT(v, i));
-                std::copy(AT(v, i + 1), AT(v, GET_OCC(v)), AT(v, i));
-                SET_OCC(v, GET_OCC(v) - 1);
-            }
-
-            /*
-             * ARITHMETIC
-             */
-
-            static inline void REDUCE(s_ap_int_vec& a, s_ap_int_vec b, int k) {
-                if (GET_IS_ALL_SINGLE(b)) {
-                    if (GET_IS_ALL_SINGLE(a)) {
-                        ADD_ALL_SINGLE(a, k + 1, AT(a, k), b, 1);
-                    } else {
-                        std::cout << "not trivial anymore" << std::endl;
-//                        ADD_SINGLE(a, k + 1, AT(a, k), b, 1);
-                        ADD(a, k + 1, AT(a, k), b, 1);
-                    }
-                } else {
-                    if(GET_IS_ALL_SINGLE(a)) {
-                        std::cout << "not trivial anymore" << std::endl;
-                        a->single &= ~vec::ALL_SINGLE_MASK; // there exists multi
-//                        ADD_SINGLE_SCALAR(a, k + 1, AT(a, k), b, 1);
-                        ADD(a, k + 1, AT(a, k), b, 1);
-                    } else {
-                        std::cout << "not trivial anymore" << std::endl;
-                        ADD(a, k + 1, AT(a, k), b, 1);
-                    }
-                }
-                vec::DELETE_POS(a, k);
-            }
         }
     }
 }
 
-#endif //ANUBIS_ARITHMETIC_SUPERBUILD_SRC_OPERATOR_PRIVATE_HPP
+#endif //ANUBIS_SUPERBUILD_OPERATOR_HPP

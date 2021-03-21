@@ -366,11 +366,11 @@ namespace jmaerte {
             //unsigned int factory_id = arith::vec::factory::REGISTER<arith::vec::stack_allocator<BLOCK_SIZE>>();
             unsigned int factory_id = arith::vec::factory::REGISTER<jmaerte::arith::vec::std_factory>();
 
-            return dim == 0 ? s_int_matrix(factory_id, f[dim], [this](int i, unsigned int factory_id) {
+            return dim == 0 ? s_int_matrix(factory_id, f[dim], arith::get_context(), [this](int i, unsigned int factory_id) {
                 return vec::NEW(factory_id, {
                     {0u, {false, 1u}}
                 }); // reduced boundary
-            }) : s_int_matrix(factory_id, f[dim], [this, top, dim, SIMPLEX_SIZE](int i, unsigned int factory_id) {
+            }) : s_int_matrix(factory_id, f[dim], arith::get_context(), [this, top, dim, SIMPLEX_SIZE](int i, unsigned int factory_id) {
                 std::vector<std::pair<unsigned int, std::pair<bool, unsigned int>>> vec {static_cast<std::size_t>(dim + 1)};
                 unsigned int * simplex = top + i * SIMPLEX_SIZE;
                 unsigned int k = f[dim - 1];
@@ -415,11 +415,11 @@ namespace jmaerte {
 
             unsigned int factory_id = arith::vec::factory::REGISTER<arith::vec::stack_allocator<BLOCK_SIZE>>();
 
-            return dim + 1 == f.size() ? s_int_matrix(factory_id, f[dim], [this](int i, unsigned int factory_id) {
+            return dim + 1 == f.size() ? s_int_matrix(factory_id, f[dim], arith::get_context(), [this](int i, unsigned int factory_id) {
                 return vec::NEW(factory_id, {
                     {0u, {false, 0u}}
                 });
-            }) : s_int_matrix(factory_id, f[dim], [this, low, top, dim, SIMPLEX_SIZE](int i, unsigned int factory_id) {
+            }) : s_int_matrix(factory_id, f[dim], arith::get_context(), [this, low, top, dim, SIMPLEX_SIZE](int i, unsigned int factory_id) {
 //                std::vector<int> indices {};
 //                indices.reserve(dim + 3);
                 std::vector<unsigned int> lead {};

@@ -22,7 +22,6 @@ using namespace jmaerte::algebra;
 namespace jmaerte {
     namespace anubis {
 
-
         /** @brief Virtual class abstraction of a simplicial complex. It guarentees us, that non-abstract child classes
          * enable us to calculate their homology and laplacian spectrum.
 
@@ -184,5 +183,13 @@ namespace jmaerte {
                 return 0;
             }
         };
+
+
+        namespace mutators {
+            class ANUBIS_EXPORT subdivision {
+            public:
+                virtual complex* operator()(complex* c) = 0;
+            };
+        }
     }
 }

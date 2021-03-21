@@ -3,8 +3,12 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
 SET(CMAKE_CXX_STANDARD 14)
 SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-SET(GCC_COVERAGE_COMPILE_FLAGS "-O3 -march=native")
+SET(GCC_COVERAGE_COMPILE_FLAGS "-march=native")
+
 ADD_DEFINITIONS(${GCC_COVERAGE_COMPILE_FLAGS})
+
+set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -fforward-propagate -finline-functions -findirect-inlining -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-branch-count-reg -flto -fomit-frame-pointer")
+
 
 INCLUDE(${CMAKE_SOURCE_DIR}/cmake/util/CMakeArgs.cmake)
 

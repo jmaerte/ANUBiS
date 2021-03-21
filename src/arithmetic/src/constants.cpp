@@ -34,6 +34,8 @@ namespace jmaerte {
             const ULL L15 = ((1ULL << 15) - 1);
             const ULL L30 = (L >> 2);
             const ULL UL_LEFTMOST = 1ULL << 31;
+
+            const int ABS_SHIFT = sizeof(long long) * 8 - 1;
         }
 
         namespace num {

@@ -19,13 +19,18 @@ namespace jmaerte {
             int i = 0;
             int max;
             unsigned int factory_id;
+            arith::arith_context* c;
             std::function<vec::s_ap_int_vec(int, unsigned int)> f;
 
         public:
-            s_int_matrix(unsigned int factory_id, int max, std::function<vec::s_ap_int_vec(int, unsigned int)> f) : factory_id(factory_id), max(max), f(f) {}
+            s_int_matrix(unsigned int factory_id, int max, arith::arith_context* c, std::function<vec::s_ap_int_vec(int, unsigned int)> f) : factory_id(factory_id), max(max), c(c), f(f) {}
 
             vec::s_ap_int_vec get() {
-                return f(i++, factory_id);
+                vec::s_ap_int_vec v = f(i++, factory_id);
+                /*if (!vec::IS_ALL_SINGLE(v)) {
+                    c->make_ap();
+                }*/
+                return v;
             }
 
             bool is_empty() {
@@ -38,6 +43,10 @@ namespace jmaerte {
 
             unsigned int rows() {
                 return max;
+            }
+
+            arith::arith_context* get_context() {
+                return c;
             }
         };
 

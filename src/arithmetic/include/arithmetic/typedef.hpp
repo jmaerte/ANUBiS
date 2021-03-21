@@ -98,9 +98,15 @@ namespace jmaerte {
         */
         class context {
         public:
-            virtual context* i_mul(num::ap_int& curr, num::ap_int& a, num::ap_int& b);
-            virtual context* add(num::ap_int& a, num::ap_int& b);
-            virtual context* mul(num::ap_int& a, num::ap_int& b);
+            virtual bool i_mul(num::ap_int& curr, num::ap_int& a, num::ap_int& b) = 0;
+            virtual bool add(num::ap_int& a, num::ap_int& b) = 0;
+            virtual bool mul(num::ap_int& a, num::ap_int& b) = 0;
+            virtual bool gcd(num::ap_int& s, num::ap_int& t, num::ap_int& q_a, num::ap_int& q_b, num::ap_int& a, num::ap_int& b) = 0;
+            virtual bool is_single(num::ap_int const& a) = 0;
+
+            virtual bool vec_reduce(vec::s_ap_int_vec& v, vec::s_ap_int_vec& trivial, int k) = 0;
+            virtual bool vec_add(vec::s_ap_int_vec& a, int start_a, const num::ap_int& coeff, vec::s_ap_int_vec& b, int start_b, int copy_a) = 0;
+            virtual bool vec_combine(vec::s_ap_int_vec& a, vec::s_ap_int_vec& b, num::ap_int& lambda_a, num::ap_int& tau_a, num::ap_int& lambda_b, num::ap_int& tau_b, int start_a, int start_b, int copy_a, int copy_b) = 0;
         };
     }
 }

@@ -20,19 +20,20 @@ static const std::string slash="\\";
 static const std::string slash="/";
 #endif
 
-int main() {
+int main(int argc, const char * argv[]) {
     jmaerte::output::LOGGER.license(jmaerte::output::logger::license::MIT, "2020", "Julian Märte", "ANUBiS", "Assemblage of Numerous Utilities for Big Simplicial Data Structures.",
             "A comprehensive library for computational topology.");
 
 //    jmaerte::input::input();
 
+    if (argc <= 1) return 0;
 
     auto start = std::chrono::high_resolution_clock::now();
 //    auto c = jmaerte::anubis::s_tree::from_file(getenv("HOME") + slash + "Downloads" + slash + "c77");
 //
 //
 //    auto c = jmaerte::anubis::s_list<false>::from_file("\\\\mathematik.uni-marburg.de\\DFS\\HOMES.Windows\\jmaerte\\Downloads\\c77");
-    auto c = jmaerte::anubis::s_list<false>::from_file(getenv("HOME") + slash + "Downloads" + slash + "c66");
+    auto c = jmaerte::anubis::s_list<false>::from_file(argv[1]);
 
     std::cout << "Dimension of " << c->get_name() << " is " << c->get_dim() << "." << std::endl;
 

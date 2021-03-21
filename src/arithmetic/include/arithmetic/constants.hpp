@@ -35,6 +35,8 @@ namespace jmaerte {
             extern const ARITHMETIC_EXPORT ULL L15;
             extern const ARITHMETIC_EXPORT ULL L30;
             extern const ARITHMETIC_EXPORT ULL UL_LEFTMOST;
+
+            extern const ARITHMETIC_EXPORT int ABS_SHIFT;
         }
         namespace num {
             extern const ARITHMETIC_EXPORT ULL SIGN;

@@ -41,15 +41,12 @@ namespace jmaerte {
                 }
             };
 
-            void reduce(double& search_time, vec::s_ap_int_vec& vec, std::map<int, vec::s_ap_int_vec>& trivial,
+            inline void reduce(arith::arith_context* context, vec::s_ap_int_vec& vec, std::map<int, vec::s_ap_int_vec>& trivial,
                     std::vector<vec::s_ap_int_vec>& remainder, std::vector<int>& first_remainder,
                     unsigned int& remainder_factory_id, bool is_remainder) {
                 int pos = num::GET_POS(vec::AT(vec, 0));
-                auto time = std::chrono::steady_clock::now();
 //                        int k = util::binary_search_ints(first, pos, 0, first.size());
                 auto it = trivial.find(pos);
-
-                search_time += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - time).count();
 
                 // DEBUGGING
                 /*std::string str_vec = "";
@@ -64,7 +61,7 @@ namespace jmaerte {
                 while (it != trivial.end()) {
 //                            vec::REDUCE(vec, trivial[k], 0);
                     //std::cout << num::GET_POS(vec::AT(vec, 0)) << " " << num::GET_POS(vec::AT(it->second, 0)) << std::endl;
-                    vec::REDUCE(vec, it->second, 0);
+                    context->vec_reduce(vec, it->second, 0);
                     /*reducing_vectors.push_back(it->second);
                     std::string str_vec_c = "";
                     for (int i = 0; i < vec::GET_OCC(vec); i++) {
@@ -76,15 +73,13 @@ namespace jmaerte {
                         break;
                     }
                     pos = num::GET_POS(vec::AT(vec, 0));
-                    time = std::chrono::steady_clock::now();
 //                            k = util::binary_search_ints(first, pos, k, first.size());
                     it = trivial.find(pos);
-                    search_time += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - time).count();
                 }
 
                 if (vec::IS_ZERO(vec)) {
                     vec::DELETE(vec);
-                } else if (num::IS_SINGLE(vec::AT(vec, 0)) && vec::AT(vec, 0).value == 1UL) {
+                } else if (context->is_single(vec::AT(vec, 0)) && vec::AT(vec, 0).value == 1UL) {
                     if (!num::GET_SIGN(vec::AT(vec, 0))) vec::SWITCH_SIGNS(vec);
                     pos = num::GET_POS(vec::AT(vec, 0));
 
@@ -109,7 +104,7 @@ namespace jmaerte {
                 }
             }
 
-            void reduce2(std::vector<vec::s_ap_int_vec>& remainder, std::map<int, vec::s_ap_int_vec>& trivial) {
+            inline void reduce2(arith::arith_context* context, std::vector<vec::s_ap_int_vec>& remainder, std::map<int, vec::s_ap_int_vec>& trivial) {
                 vec::s_ap_int_vec pivot = remainder.back();
                 remainder.pop_back();
 
@@ -118,8 +113,8 @@ namespace jmaerte {
 
                 while (it != trivial.end()) {
                     vec::s_ap_int_vec& vec = it->second;
-                    if (num::IS_SINGLE(vec::AT(vec, 0)) && vec::AT(vec, 0).value == 1UL) {
-                        vec::REDUCE(pivot, vec, 0);
+                    if (context->is_single(vec::AT(vec, 0)) && vec::AT(vec, 0).value == 1UL) {
+                        context->vec_reduce(pivot, vec, 0);
                     } else if (num::COMPARE_ABS(vec::AT(pivot, 0), vec::AT(vec, 0)) == 0) {
                         num::ap_int a = vec::GET(vec, 0);
                         num::ap_int b = vec::GET(pivot, 0);
@@ -130,7 +125,7 @@ namespace jmaerte {
                         num::ap_int lambda;
                         num::NEW(lambda, 0, !(sign_a ^ sign_b), 1u);
 
-                        vec::ADD(pivot, 1, lambda, vec, 1, 0);
+                        context->vec_add(pivot, 1, lambda, vec, 1, 0);
                     } else {
                         num::ap_int s, t;
                         num::ap_int x, y;
@@ -141,7 +136,7 @@ namespace jmaerte {
                         bool sign_a = num::GET_SIGN(a);
                         bool sign_b = num::GET_SIGN(b);
 
-                        num::GCD(s, t, x, y, a, b);
+                        context->gcd(s, t, x, y, a, b);
 
                         if (num::IS_ZERO(s)) {
                             vec::GET(pivot, 0) = a;
@@ -154,7 +149,7 @@ namespace jmaerte {
 
                             num::SWITCH_SIGN(x);
 
-                            vec::ADD(vec, 1, x, pivot, 1, 0);
+                            context->vec_add(vec, 1, x, pivot, 1, 0);
 
                             vec::s_ap_int_vec temp = vec;
                             trivial[pos] = pivot;
@@ -168,11 +163,11 @@ namespace jmaerte {
                             num::SWITCH_SIGN(y);
 
                             num::DELETE_DATA(vec::GET(pivot, 0));
-                            vec::ADD(pivot, 1, y, vec, 1, 0);
+                            context->vec_add(pivot, 1, y, vec, 1, 0);
                         } else {
                             num::SWITCH_SIGN(y);
                             num::DELETE_DATA(vec::GET(pivot, 0));
-                            vec::COMBINE(vec, pivot, s, t, y, x, 1, 1, 1, 0);
+                            context->vec_combine(vec, pivot, s, t, y, x, 1, 1, 1, 0);
                             //vec::DELETE_POS(pivot, 0);
                         }
                         num::DELETE_DATA(s);
@@ -180,7 +175,7 @@ namespace jmaerte {
                         num::DELETE_DATA(x);
                         num::DELETE_DATA(y);
 
-                        if (num::IS_SINGLE(vec::AT(vec, 0)) && vec::AT(vec, 0).value == 1UL) {
+                        if (context->is_single(vec::AT(vec, 0)) && vec::AT(vec, 0).value == 1UL) {
                             if (!num::GET_SIGN(vec::AT(vec, 0))) vec::SWITCH_SIGNS(vec);
                         }
                     }
@@ -192,212 +187,11 @@ namespace jmaerte {
                 if (vec::IS_ZERO(pivot)) {
                     vec::DELETE(pivot);
                 } else {
-                    if (num::IS_SINGLE(vec::AT(pivot, 0)) && vec::AT(pivot, 0).value == 1UL) {
+                    if (context->is_single(vec::AT(pivot, 0)) && vec::AT(pivot, 0).value == 1UL) {
                         if (!num::GET_SIGN(vec::AT(pivot, 0))) vec::SWITCH_SIGNS(pivot);
                     }
                     trivial[pos] = pivot;
                 }
-                
-                /*
-                bool rem = it == trivial.end();
-                if (rem) {
-                    for (int j = 0; j < remainder.size(); j++) {
-                        if (num::GET_POS(vec::AT(remainder[j], 0)) == pos) k = j;
-                    }
-                } else k = it->first;
-
-                while (!vec::IS_ZERO(remainder[i]) && k >= 0) {
-
-                    for (int j = 0; j < vec::GET_OCC(remainder[i]); j++) {
-                        if (num::IS_ZERO(vec::GET(remainder[i], j))) {
-                            throw std::runtime_error("ONE OF THE INPUT POSITIONS IS ZERO!");
-                        }
-                    }
-
-                    //if (num::GET_OCC(vec::GET(remainder[i], 0)) > 2) throw std::runtime_error("OVERRUN 2 WORDS");
-                    if (rem) {
-                        bool sign_x = num::GET_SIGN(vec::GET(remainder[k], 0));
-                        bool sign_y = num::GET_SIGN(vec::GET(remainder[i], 0));
-
-                        if (num::IS_ZERO(vec::GET(remainder[k], 0))) throw std::runtime_error("LEADING ENTRY OF REMAINDER VECTOR IS ZERO!");
-                        if (num::IS_ZERO(vec::GET(remainder[i], 0))) throw std::runtime_error("LEADING ENTRY OF VECTOR TO REDUCE IS ZERO!");
-
-                        if (num::COMPARE_ABS(vec::GET(remainder[k], 0), vec::GET(remainder[i], 0)) == 0) {
-                            num::ap_int lambda;
-                            num::NEW(lambda, 0, !(sign_x ^ sign_y), 1u);
-
-
-                            num::ap_int debug;
-                            num::COPY(debug, vec::GET(remainder[i], 0));
-                            num::ap_int curr;
-                            num::i_MUL(curr, lambda, vec::GET(remainder[k], 0));
-                            num::ADD(debug, curr);
-                            num::DELETE_DATA(curr);
-
-                            if (!num::IS_ZERO(debug)) {
-                                std::cout << "|i| == |k|: " <<  num::STRINGIFY(debug) << " " << num::STRINGIFY(vec::GET(remainder[k], 0)) << " " << num::STRINGIFY(lambda) << std::endl;
-                                throw std::runtime_error("");
-                            }
-                            num::DELETE_DATA(debug);
-
-                            vec::ADD(remainder[i], 0, lambda, remainder[k], 0);
-                        } else {
-                            //std::cout << "GCD OF a = " << num::STRINGIFY(vec::GET(remainder[k], 0)) << ", b = " << num::STRINGIFY(vec::GET(remainder[i], 0)) << std::endl;
-
-                            num::ap_int debug_a, debug_b;
-                            num::COPY(debug_a, vec::GET(remainder[k], 0));
-                            num::COPY(debug_b, vec::GET(remainder[i], 0));
-
-                            num::GCD(s, t, x, y, vec::GET(remainder[k], 0), vec::GET(remainder[i], 0));
-                            std::cout << num::STRINGIFY(debug_a) << " " << num::STRINGIFY(debug_b) << " " << num::STRINGIFY(s) << " " << num::STRINGIFY(t) << " " << num::STRINGIFY(x) << " " << num::STRINGIFY(y) << " " << num::STRINGIFY(vec::GET(remainder[k], 0)) << std::endl;
-                            */
-                            /*std::cout << num::STRINGIFY(vec::GET(remainder[k], 0)) << ": (" << num::STRINGIFY(s) << ", " << num::STRINGIFY(t) << ", " << num::STRINGIFY(x) << ", " << num::STRINGIFY(y) << ")" << std::endl;
-                            num::ap_int max_k = vec::GET(remainder[k], 0), max_i = vec::GET(remainder[i], 0);
-                            for (int j = 1; j < vec::GET_OCC(remainder[k]); j++) {
-                                if (num::COMPARE_ABS(vec::GET(remainder[k], j), max_k) > 0) max_k = vec::GET(remainder[k], j);
-                            }
-                            for (int j = 1; j < vec::GET_OCC(remainder[i]); j++) {
-                                if (num::COMPARE_ABS(vec::GET(remainder[i], j), max_i) > 0) max_i = vec::GET(remainder[i], j);
-                            }
-                            std::cout << num::STRINGIFY(max_k) << " " << num::STRINGIFY(max_i) << std::endl;*/
-                            /*if (num::IS_ZERO(s)) {
-                                // thus remainder[i].values[0] | remainder[k].values[0] and x is the quotient remainder[k].values[0] / remainder[i].values[0]
-                                // swap the vectors
-                                num::DELETE_DATA(remainder[i].values[0]);
-                                remainder[i].values[0] = remainder[k].values[0];
-                                std::copy(remainder[k].values + 1, remainder[k].values + vec::GET_OCC(remainder[k]), remainder[k].values);
-                                vec::SET_OCC(remainder[k], vec::GET_OCC(remainder[k]) - 1);
-
-                                auto temp = remainder[i];
-                                remainder[i] = remainder[k];
-                                remainder[k] = temp;
-
-                                if (sign_y) num::SWITCH_SIGN(x);
-                                num::SWITCH_SIGN(x);
-                                vec::ADD(remainder[i], 0, x, remainder[k], 1);
-
-                                num::ap_int curr;
-                                num::i_MUL(curr, x, debug_b);
-                                num::ADD(debug_a, curr);
-                                num::DELETE_DATA(curr);
-
-                                if (!num::IS_ZERO(debug_a)) {
-                                    std::cout << "i | k : " <<  num::STRINGIFY(t) << " " << num::STRINGIFY(debug_a) << " " << num::STRINGIFY(debug_b) << " " << num::STRINGIFY(vec::GET(remainder[k], 0)) << std::endl;
-                                    throw std::runtime_error("");
-                                }
-                            } else if (num::IS_ZERO(t)) {
-                                // make y = b / a.
-                                if (sign_x) num::SWITCH_SIGN(y);
-                                // y = - b / a.
-                                num::SWITCH_SIGN(y);
-                                vec::ADD(remainder[i], 1, y, remainder[k], 1);
-                                vec::DELETE_POS(remainder[i], 0);
-
-                                num::ap_int curr;
-                                num::i_MUL(curr, y, debug_a);
-                                num::ADD(debug_b, curr);
-                                num::DELETE_DATA(curr);
-                                if (!num::IS_ZERO(debug_b)) {
-                                    std::cout << "k | i : " << num::STRINGIFY(s) << " " << num::STRINGIFY(debug_a) << " " << num::STRINGIFY(debug_b) << " " << num::STRINGIFY(vec::GET(remainder[k], 0)) << std::endl;
-                                    throw std::runtime_error("");
-                                }
-                            } else {
-                                std::cout << "COMBINE" << std::endl;
-                                num::SWITCH_SIGN(y);
-                                vec::COMBINE(remainder[k], remainder[i], s, t, y, x, 1, 1);
-                                vec::DELETE_POS(remainder[i], 0);
-                                num::SWITCH_SIGN(y);
-
-                                num::ap_int curr;
-                                num::ap_int res;
-                                num::i_MUL(curr, t, debug_b);
-                                num::i_MUL(res, s, debug_a);
-                                num::ADD(res, curr);
-                                if (num::COMPARE(res, vec::GET(remainder[k], 0)) != 0) {
-                                    std::cout << num::STRINGIFY(debug_a) << " " << num::STRINGIFY(debug_b) << " " << num::STRINGIFY(s) << " " << num::STRINGIFY(t) << " " << num::STRINGIFY(vec::GET(remainder[k], 0)) << std::endl;
-                                    throw std::runtime_error("BEZOUT COEFFICIENTS WRONG!");
-                                }
-                                num::DELETE_DATA(res);
-                                num::DELETE_DATA(curr);
-
-                                num::i_MUL(curr, vec::GET(remainder[k], 0), x);
-                                num::i_MUL(res, vec::GET(remainder[k], 0), y);
-                                if (num::COMPARE(curr, debug_a) != 0 || num::COMPARE(res, debug_b) != 0) {
-                                    std::cout << num::STRINGIFY(debug_a) << " " << num::STRINGIFY(debug_b) << " " << num::STRINGIFY(x) << " " << num::STRINGIFY(y) << " " << num::STRINGIFY(vec::GET(remainder[k], 0)) << std::endl;
-                                    throw std::runtime_error("QUOTIENTS WRONG!");
-                                }
-                                num::DELETE_DATA(res);
-                                num::DELETE_DATA(curr);
-
-                                num::SWITCH_SIGN(y);
-                                num::i_MUL(curr, y, debug_a);
-                                num::i_MUL(res, x, debug_b);
-                                num::ADD(curr, res);
-                                if (!num::IS_ZERO(curr)) {
-                                    std::cout << num::STRINGIFY(debug_a) << " " << num::STRINGIFY(debug_b) << " " << num::STRINGIFY(x) << " " << num::STRINGIFY(y) << " " << num::STRINGIFY(vec::GET(remainder[k], 0)) << std::endl;
-                                    throw std::runtime_error("NOT ELIMINATING LEADING ENTRY!");
-                                }
-                                num::DELETE_DATA(res);
-                                num::DELETE_DATA(curr);
-                            }
-
-                            num::DELETE_DATA(debug_a);
-                            num::DELETE_DATA(debug_b);
-                            */
-                            /*if (vec::GET_OCC(remainder[k]) > 0 && vec::GET_OCC(remainder[i]) > 0) {
-                                max_k = vec::GET(remainder[k], 0);
-                                max_i = vec::GET(remainder[i], 0);
-                                for (int j = 1; j < vec::GET_OCC(remainder[k]); j++) {
-                                    if (num::COMPARE_ABS(vec::GET(remainder[k], j), max_k) > 0) max_k = vec::GET(remainder[k], j);
-                                }
-                                
-                                for (int j = 1; j < vec::GET_OCC(remainder[i]); j++) {
-                                    if (num::COMPARE_ABS(vec::GET(remainder[i], j), max_i) > 0) max_i = vec::GET(remainder[i], j);
-                                }
-                                std::cout << num::STRINGIFY(max_k) << " " << num::STRINGIFY(max_i) << std::endl;
-                            }*/
-                            /*num::DELETE_DATA(s);
-                            num::DELETE_DATA(t);
-                            num::DELETE_DATA(x);
-                            num::DELETE_DATA(y);
-
-                            if (num::IS_SINGLE(vec::GET(remainder[k], 0)) && vec::GET(remainder[k], 0).value == 1u) {
-                                if (!num::GET_SIGN(vec::GET(remainder[k], 0))) vec::SWITCH_SIGNS(remainder[k]);
-                                trivial[num::GET_POS(vec::GET(remainder[k], 0))] = remainder[k];
-                                remainder.erase(remainder.begin() + k);
-                                i--;
-                            }
-                        }
-                    } else {
-                        vec::REDUCE(remainder[i], trivial[k], 0);
-                    }
-
-                    if (vec::IS_ZERO(remainder[i])) break;
-
-                    pos = num::GET_POS(vec::AT(remainder[i], 0));
-                    it = trivial.find(pos);
-
-                    k = -1;
-                    rem = it == trivial.end();
-                    if (rem) {
-                        for (int j = 0; j < i; j++) {
-                            if (num::GET_POS(vec::AT(remainder[j], 0)) == pos) k = j;
-                        }
-                    } else k = it->first;
-                }
-
-                if (vec::IS_ZERO(remainder[i])) {
-                    vec::DELETE(remainder[i]);
-                    remainder.erase(remainder.begin() + i);
-                } else {
-                    if (num::IS_SINGLE(vec::GET(remainder[i], 0)) && vec::GET(remainder[i], 0).value == 1) {
-                        if (!num::GET_SIGN(vec::AT(remainder[i], 0))) vec::SWITCH_SIGNS(remainder[i]);
-                        pos = num::GET_POS(vec::AT(remainder[i], 0));
-
-                        trivial[pos] = remainder[i];
-                    }
-                    i++;
-                }*/
             }
 
             int get_block_size(std::vector<vec::s_ap_int_vec>& remainder, int offset) {
@@ -462,6 +256,8 @@ namespace jmaerte {
 
                 unsigned int remainder_factory_id = arith::vec::factory::REGISTER<jmaerte::arith::vec::std_factory>();
 
+                arith::arith_context* context = matrix.get_context();
+
                 std::vector<vec::s_ap_int_vec> remainder;
                 std::vector<int> first_remainder;
                 std::map<num::ap_int, unsigned int, num::comp::UNSIGNED_COMPARATOR> result;
@@ -477,14 +273,11 @@ namespace jmaerte {
                     int count = 0;
 
                     while (!matrix.is_empty()) {
-                        auto time = std::chrono::steady_clock::now();
                         vec::s_ap_int_vec vec = matrix.get();
-                        allocation_generation_time += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - time).count();
 
                         if (count % 1000 == 0) std::cout << count << " / " << matrix.rows() << " current torsion-free rank: " << trivial.size() << "; number of deferred vectors " << remainder.size() << std::endl;
                         count++;
-                        reduce(search_time, vec, trivial, remainder, first_remainder, remainder_factory_id, false);
-
+                        reduce(context, vec, trivial, remainder, first_remainder, remainder_factory_id, false);
                     }
 
                     std::cout << "current torsion-free rank: " << trivial.size() << std::endl;
@@ -517,12 +310,12 @@ namespace jmaerte {
 
                     int remainder_size = remainder.size();
                     while (remainder.size() > 0) {
-                        reduce2(remainder, trivial);
+                        reduce2(context, remainder, trivial);
                     }
 
                     num::NEW(det, 0, false, 1u);
                     for (auto it = trivial.begin(); it != trivial.end(); ++it) {
-                        if (num::IS_SINGLE(vec::AT(it->second, 0)) && vec::AT(it->second, 0).value == 1UL) {
+                        if (context->is_single(vec::AT(it->second, 0)) && vec::AT(it->second, 0).value == 1UL) {
                             if (vec::GET_FACTORY_ID(it->second) == remainder_factory_id) {
                                 vec::DELETE(it->second);
                             }
@@ -535,8 +328,8 @@ namespace jmaerte {
                                     i++;
                                 } else {
                                     vec::s_ap_int_vec triv = it_triv->second;
-                                    if (num::IS_SINGLE(vec::AT(triv, 0)) && vec::AT(triv, 0).value == 1UL) {
-                                        vec::REDUCE(vec, triv, i);
+                                    if (context->is_single(vec::AT(triv, 0)) && vec::AT(triv, 0).value == 1UL) {
+                                        context->vec_reduce(vec, triv, i);
                                     } else i++;
                                 }
                             }
@@ -703,7 +496,7 @@ namespace jmaerte {
                         } else {
                             std::cout << "row" << std::endl;
 
-                            if (num::IS_SINGLE(vec::AT(remainder[0], 0)) && *num::ABS(vec::AT(remainder[0], 0)) == 1UL) {
+                            if (context->is_single(vec::AT(remainder[0], 0)) && *num::ABS(vec::AT(remainder[0], 0)) == 1UL) {
                                 auto it = result.find(vec::AT(remainder[0], 0));
                                 if (it != result.end()) (*it).second = (*it).second + 1u;
                                 else {

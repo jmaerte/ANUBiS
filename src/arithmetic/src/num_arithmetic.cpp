@@ -492,5 +492,93 @@ namespace jmaerte {
                 return COMPARE_ABS(a, b) < 0;
             }
         }
+
+
+
+
+        bool sp_context::i_mul(num::ap_int& curr, num::ap_int& a, num::ap_int& b) {
+            ULL prod = ((ULL) a.value) * ((ULL) b.value);
+            num::NEW(curr, num::GET_POS(a), num::GET_SIGN(a) ^ num::GET_SIGN(b), prod);
+            UL overflow = prod >> 32;
+            if (overflow) {
+                num::aux::MAKE_MULTI_OVERFLOW(curr, overflow);
+                return true;
+            }
+            return false;
+        }
+
+        bool sp_context::add(num::ap_int& a, num::ap_int& b) {
+            if (num::GET_SIGN(a) == num::GET_SIGN(b)) {
+                ULL sum = ((ULL) a.value) + ((ULL) b.value);
+                UL overflow = sum >> 32;
+                a.value = sum;
+                if (overflow) {
+                    num::aux::MAKE_MULTI_OVERFLOW(a, overflow);
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        bool sp_context::mul(num::ap_int& a, num::ap_int& b) {
+            ULL prod = ((ULL) a.value) * ((ULL) b.value);
+            UL overflow = prod >> 32;
+            a.value = prod;
+            if (num::GET_SIGN(b)) num::SWITCH_SIGN(a);
+            if (overflow) {
+                num::aux::MAKE_MULTI_OVERFLOW(a, overflow);
+                return true;
+            }
+            return false;
+        }
+
+
+        bool sp_context::gcd(num::ap_int& s, num::ap_int& t, num::ap_int& q_a, num::ap_int& q_b, num::ap_int& a, num::ap_int& b) {
+            long long a_val = a.value;
+            long long b_val = b.value;
+
+            long long s_val = 1;
+            long long t_val = 0;
+            long long q_a_val = 1;
+            long long q_b_val = 0;
+
+            long long temp;
+            while (b_val != 0) {
+                long long q = a_val / b_val;
+                
+                temp = b_val;
+                b_val = a_val - q * b_val;
+                a_val = temp;
+
+                temp = q_b_val;
+                q_b_val = s_val - q * q_b_val;
+                s_val = temp;
+
+                temp = q_a_val;
+                q_a_val = t_val - q * q_a_val;
+                t_val = temp;
+            }
+
+            bool sign_a = num::GET_SIGN(a);
+            bool sign_b = num::GET_SIGN(b);
+
+            num::NEW(s, 0, (s_val < 0) ^ sign_a, s_val < 0 ? -s_val : s_val);
+            num::NEW(t, 0, (t_val < 0) ^ sign_b, t_val < 0 ? -t_val : t_val);
+
+            num::NEW(q_a, 0, sign_a, q_a_val < 0 ? -q_a_val : q_a_val);
+            num::NEW(q_b, 0, sign_b, q_b_val < 0 ? -q_b_val : q_b_val);
+
+            num::NEW(a, num::GET_POS(a), false, a_val);
+            num::NEW(b, num::GET_POS(b), false, 0);
+
+            // We know this cant overflow because |q_a| <= |a|, |q_b| <= |b|, |s| <= |b/2|, |t| <= |a/2| (if gcd != a,b) 
+            return false;
+        }
+
+
+        arith_context* get_context() {
+            return new arith_context(sp_context::instance());
+        }
+
     }
 }

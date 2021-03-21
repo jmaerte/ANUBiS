@@ -138,12 +138,10 @@ namespace jmaerte {
             ARITHMETIC_EXPORT void MOD(s_ap_int_vec& vec);
         }
 
-        /*class ap_context : public context {
+        class ap_context : public context {
         private:
 
             ap_context() { }
-            ap_context(ap_context const&);
-            void operator=(ap_context const&);
 
         public:
 
@@ -155,21 +153,47 @@ namespace jmaerte {
                 return &i;
             }
 
-            virtual context* i_mul(num::ap_int& curr, num::ap_int& a, num::ap_int& b) {
+            virtual bool i_mul(num::ap_int& curr, num::ap_int& a, num::ap_int& b) {
                 num::i_MUL(curr, a, b);
-                return this;
+                return false;
             }
 
-            virtual context* add(num::ap_int& a, num::ap_int& b) {
+            virtual bool add(num::ap_int& a, num::ap_int& b) {
                 num::ADD(a, b);
-                return this;
+                return false;
             }
 
-            virtual context* mul(num::ap_int& a, num::ap_int& b) {
+            virtual bool mul(num::ap_int& a, num::ap_int& b) {
                 num::MUL(a, b);
-                return this;
+                return false;
             }
-        }
+
+            virtual bool gcd(num::ap_int& s, num::ap_int& t, num::ap_int& q_a, num::ap_int& q_b, num::ap_int& a, num::ap_int& b) {
+                num::GCD(s, t, q_a, q_b, a, b);
+                return false;
+            }
+
+            virtual bool is_single(num::ap_int const& a) {
+                return num::IS_SINGLE(a);
+            }
+
+
+
+            virtual bool vec_reduce(vec::s_ap_int_vec& v, vec::s_ap_int_vec& trivial, int k) {
+                vec::REDUCE(v, trivial, k);
+                return false;
+            }
+
+            virtual bool vec_add(vec::s_ap_int_vec& a, int start_a, const num::ap_int& coeff, vec::s_ap_int_vec& b, int start_b, int copy_a) {
+                vec::ADD(a, start_a, coeff, b, start_b, copy_a);
+                return false;
+            }
+
+            virtual bool vec_combine(vec::s_ap_int_vec& a, vec::s_ap_int_vec& b, num::ap_int& lambda_a, num::ap_int& tau_a, num::ap_int& lambda_b, num::ap_int& tau_b, int start_a, int start_b, int copy_a, int copy_b) {
+                vec::COMBINE(a, b, lambda_a, tau_a, lambda_b, tau_b, start_a, start_b, copy_a, copy_b);
+                return false;
+            }
+        };
 
         class sp_context : public context {
         private:
@@ -186,68 +210,92 @@ namespace jmaerte {
                 return &i;
             }
 
-            virtual context* i_mul(num::ap_int& curr, num::ap_int& a, num::ap_int& b) {
-                ULL prod = ((ULL) a.value) * ((ULL) b.value);
-                NEW(res, GET_POS(a), GET_SIGN(a) ^ GET_SIGN(b), prod);
-                UL overflow = prod >> 32;
-                if (overflow) {
-                    //aux::MAKE_MULTI_OVERFLOW(curr, overflow);
-                    return ap_context::instance();
-                }
-                return this;
+            virtual bool i_mul(num::ap_int& curr, num::ap_int& a, num::ap_int& b);
+            virtual bool add(num::ap_int& a, num::ap_int& b);
+            virtual bool mul(num::ap_int& a, num::ap_int& b);
+            virtual bool gcd(num::ap_int& s, num::ap_int& t, num::ap_int& q_a, num::ap_int& q_b, num::ap_int& a, num::ap_int& b);
+            virtual bool is_single(num::ap_int const& a) {
+                return true;
             }
 
-            virtual context* add(num::ap_int& a, num::ap_int& b) {
-                if (num::GET_SIGN(a) == num::GET_SIGN(b)) {
-                    ULL sum = ((ULL) a.value) + ((ULL) b.value);
-                    UL overflow = sum >> 32;
-                    a.value = sum;
-                    if (overflow) {
-                        //aux::MAKE_MULTI_OVERFLOW(a, overflow);
-                        return ap_context::instance();
-                    }
-                    return this;
-                }
+            virtual bool vec_reduce(vec::s_ap_int_vec& v, vec::s_ap_int_vec& trivial, int k) {
+                return vec_add(v, k + 1, vec::AT(v, k), trivial, 1, k);
             }
-
-            virtual context* mul(num::ap_int& a, num::ap_int& b) {
-                ULL prod = ((ULL) a.value) * ((ULL) b.value);
-                UL overflow = prod >> 32;
-                a.value = prod;
-                if (num::GET_SIGN(b)) num::SWITCH_SIGN(a);
-                if (overflow) {
-                    //aux::MAKE_MULTI_OVERFLOW(a, overflow);
-                    return ap_context::instance();
-                }
-                return this;
-            }
+            virtual bool vec_add(vec::s_ap_int_vec& a, int start_a, const num::ap_int& coeff, vec::s_ap_int_vec& b, int start_b, int copy_a);
+            virtual bool vec_combine(vec::s_ap_int_vec& a, vec::s_ap_int_vec& b, num::ap_int& lambda_a, num::ap_int& tau_a, num::ap_int& lambda_b, num::ap_int& tau_b, int start_a, int start_b, int copy_a, int copy_b);
         };
 
         class arith_context : public context {
         private:
             context* c;
-            arith_context(context* c) : c(c) { }
 
         public:
-            virtual context* i_mul(num::ap_int& curr, num::ap_int& a, num::ap_int& b) {
-                c = c->i_mul(curr, a, b);
-                return this;
+            
+            arith_context(context* c) : c(c) { }
+
+            virtual bool i_mul(num::ap_int& curr, num::ap_int& a, num::ap_int& b) {
+                if (c->i_mul(curr, a, b)) {
+                    make_ap();
+                }
+                return false;
             }
 
-            virtual context* add(num::ap_int& a, num::ap_int& b) {
-                c = c->add(a, b);
-                return this;
+            virtual bool add(num::ap_int& a, num::ap_int& b) {
+                if (c->add(a, b)) {
+                    make_ap();
+                }
+                return false;
             }
 
-            virtual context* mul(num::ap_int& a, num::ap_int& b) {
-                c = c->mul(a, b);
-                return this;
+            virtual bool mul(num::ap_int& a, num::ap_int& b) {
+                if (c->mul(a, b)) {
+                    make_ap();
+                }
+                return false;
+            }
+
+            virtual bool gcd(num::ap_int& s, num::ap_int& t, num::ap_int& q_a, num::ap_int& q_b, num::ap_int& a, num::ap_int& b) {
+                if (c->gcd(s, t, q_a, q_b, a, b)) {
+                    make_ap();
+                }
+                return false;
+            }
+
+            virtual bool is_single(num::ap_int const& a) {
+                return c->is_single(a);
+            }
+
+
+
+
+            virtual bool vec_reduce(vec::s_ap_int_vec& v, vec::s_ap_int_vec& trivial, int k) {
+                if (c->vec_reduce(v, trivial, k)) {
+                    make_ap();
+                }
+                return false;
+            }
+
+            virtual bool vec_add(vec::s_ap_int_vec& a, int start_a, const num::ap_int& coeff, vec::s_ap_int_vec& b, int start_b, int copy_a) {
+                if (c->vec_add(a, start_a, coeff, b, start_b, copy_a)) {
+                    make_ap();
+                }
+                return false;
+            }
+
+            virtual bool vec_combine(vec::s_ap_int_vec& a, vec::s_ap_int_vec& b, num::ap_int& lambda_a, num::ap_int& tau_a, num::ap_int& lambda_b, num::ap_int& tau_b, int start_a, int start_b, int copy_a, int copy_b) {
+                if (c->vec_combine(a, b, lambda_a, tau_a, lambda_b, tau_b, start_a, start_b, copy_a, copy_b)) {
+                    make_ap();
+                }
+                return false;
+            }
+
+            inline void make_ap() {
+                c = ap_context::instance();
+                std::cout << "SWAPPED TO MULTI PRECISION" << std::endl;
             }
         };
 
-        context* get_context() {
-            return new arith_context(sp_context::instance());
-        }*/
+        arith_context* get_context();
     }
 }
 
